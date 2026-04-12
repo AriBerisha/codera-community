@@ -1,0 +1,297 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// AUTH TABLES
+// ============================================================
+
+model User {
+  id             String   @id @default(cuid())
+  name           String?
+  email          String   @unique
+  hashedPassword String?
+  role           Role     @default(MEMBER)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  sessions           Session[]
+  conversations      Conversation[]
+  messages           Message[]
+  workflowExecutions WorkflowExecution[]
+
+  @@index([email])
+  @@index([role])
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================================
+// APP SETTINGS (singleton: id is always "default")
+// ============================================================
+
+model AppSettings {
+  id             String  @id @default("default")
+  setupCompleted Boolean @default(false)
+
+  // GitLab
+  gitlabUrl     String?
+  gitlabPat     String? // encrypted
+  gitlabGroupId String?
+
+  // GitHub
+  githubUrl     String?  // e.g. https://github.com or GHE URL
+  githubPat     String?  // encrypted
+  githubOrgName String?
+
+  // AI Provider
+  aiProvider    String @default("openrouter") // openrouter | openai | google | ollama | openwebui
+  aiModel       String @default("anthropic/claude-sonnet-4")
+  aiApiKey      String? // encrypted
+  aiBaseUrl     String? // custom base URL for Ollama, Open WebUI, or any compatible endpoint
+
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+// GITLAB DATA
+// ============================================================
+
+model GitlabProject {
+  id                String      @id @default(cuid())
+  gitlabId          Int         @unique
+  name              String
+  pathWithNamespace String
+  description       String?
+  webUrl            String
+  defaultBranch     String      @default("main")
+  lastIndexedAt     DateTime?
+  indexStatus       IndexStatus @default(PENDING)
+  included          Boolean     @default(false)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  files IndexedFile[]
+
+  @@index([gitlabId])
+  @@index([indexStatus])
+}
+
+enum IndexStatus {
+  PENDING
+  INDEXING
+  INDEXED
+  FAILED
+}
+
+model GithubProject {
+  id                String      @id @default(cuid())
+  githubId          Int         @unique
+  name              String
+  fullName          String      // owner/repo
+  description       String?
+  htmlUrl           String
+  defaultBranch     String      @default("main")
+  lastIndexedAt     DateTime?
+  indexStatus       IndexStatus @default(PENDING)
+  included          Boolean     @default(false)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  files IndexedFile[] @relation("GithubProjectFiles")
+
+  @@index([githubId])
+  @@index([indexStatus])
+}
+
+model IndexedFile {
+  id              String   @id @default(cuid())
+  projectId       String?
+  githubProjectId String?
+  filePath        String
+  fileName        String
+  language        String?
+  content         String   @db.Text
+  sizeBytes       Int
+  sha             String
+  indexedAt        DateTime @default(now())
+
+  project       GitlabProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  githubProject GithubProject? @relation("GithubProjectFiles", fields: [githubProjectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, filePath])
+  @@unique([githubProjectId, filePath])
+  @@index([projectId])
+  @@index([githubProjectId])
+  @@index([fileName])
+  @@index([language])
+}
+
+// ============================================================
+// CHAT
+// ============================================================
+
+model Conversation {
+  id              String   @id @default(cuid())
+  title           String?
+  userId          String
+  projectIds      String[]
+  projectBranches Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages           Message[]
+  workflowExecutions WorkflowExecution[]
+  fileChanges        FileChange[]
+
+  @@index([userId])
+  @@index([updatedAt])
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  userId         String?
+  role           MessageRole
+  content        String      @db.Text
+  codeReferences Json?
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id])
+
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+// ============================================================
+// WORKFLOWS
+// ============================================================
+
+model Workflow {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  steps      WorkflowStep[]
+  executions WorkflowExecution[]
+
+  @@index([isActive])
+}
+
+model WorkflowStep {
+  id         String           @id @default(cuid())
+  workflowId String
+  name       String
+  type       WorkflowStepType
+  order      Int
+  config     Json?
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, order])
+  @@index([workflowId])
+}
+
+enum WorkflowStepType {
+  PLANNING
+  PROGRAMMING
+  COMMIT
+}
+
+model WorkflowExecution {
+  id               String                  @id @default(cuid())
+  workflowId       String
+  conversationId   String
+  userId           String
+  currentStepOrder Int                     @default(0)
+  status           WorkflowExecutionStatus @default(IN_PROGRESS)
+  planText         String?                 @db.Text
+  commitBranch     String?
+  commitMessage    String?
+  commitResult     Json?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  workflow     Workflow     @relation(fields: [workflowId], references: [id])
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
+  fileChanges  FileChange[]
+
+  @@index([conversationId])
+  @@index([userId])
+  @@index([status])
+}
+
+enum WorkflowExecutionStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model FileChange {
+  id              String           @id @default(cuid())
+  executionId     String?
+  conversationId  String?
+  projectId       String
+  filePath        String
+  originalContent String           @db.Text
+  modifiedContent String           @db.Text
+  language        String?
+  status          FileChangeStatus @default(PENDING)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  execution    WorkflowExecution? @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  conversation Conversation?      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([executionId, projectId, filePath])
+  @@unique([conversationId, projectId, filePath])
+  @@index([executionId])
+  @@index([conversationId])
+}
+
+enum FileChangeStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMMITTED
+}
