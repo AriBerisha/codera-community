@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codera | AI-Powered Code Intelligence Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        midnight: '#0d1117',
+                        deepNavy: '#161b22',
+                        surface: '#1c2129',
+                        borderDark: '#30363d',
+                        accent: '#007acc',
+                        accentLight: '#68c2ff',
+                        accentGlow: '#007acc',
+                        textPrimary: '#c9d1d9',
+                        textMuted: '#7d8590',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            overflow-x: hidden;
+        }
+
+        .glass {
+            background: rgba(22, 27, 34, 0.5);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 122, 204, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(13, 17, 23, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(48, 54, 61, 0.6);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            height: 100%;
+        }
+
+        .glass-card:hover {
+            background: rgba(22, 27, 34, 0.9);
+            border: 1px solid rgba(0, 122, 204, 0.4);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 60px rgba(0, 122, 204, 0.1), 0 0 40px rgba(0, 122, 204, 0.05);
+        }
+
+        .glow-text {
+            text-shadow: 0 0 40px rgba(0, 122, 204, 0.4);
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #68c2ff 0%, #007acc 50%, #005a9e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-glow {
+            background: radial-gradient(circle at 50% 40%, rgba(0, 122, 204, 0.08) 0%, transparent 60%);
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+            animation: marquee 35s linear infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes orb-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .logo-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #007acc; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007acc 0%, #005a9e 100%);
+            box-shadow: 0 4px 24px rgba(0, 122, 204, 0.3);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 8px 40px rgba(0, 122, 204, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .section-line {
+            width: 48px;
+            height: 3px;
+            background: linear-gradient(90deg, #007acc, #68c2ff);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Animated Background Canvas -->
+    <div id="canvas-container">
+        <canvas id="networkCanvas"></canvas>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 px-4 md:px-6 py-4">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4 glass rounded-2xl px-5 md:px-6 py-3">
+            <div class="flex items-center">
+                <svg class="w-16 h-16" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logoGrad" x1="27" y1="209" x2="1252" y2="512" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#68c2ff"/>
+                            <stop offset="1" stop-color="#007acc"/>
+                        </linearGradient>
+                    </defs>
+                    <path fill="url(#logoGrad)" fill-rule="evenodd" d="m664.2 261.4c-0.1 28.9-0.4 52.6-0.7 52.6-0.3 0-2-0.7-3.8-1.7-1.7-0.9-7-2.9-11.7-4.5-4.7-1.5-12.1-3.5-16.5-4.3-4.4-0.9-12.5-1.6-18-1.6-5.5 0-12.9 0.5-16.5 1-3.6 0.6-9.4 1.9-13 3-3.6 1.1-9.7 3.4-13.5 5.1-3.9 1.8-10.8 5.7-15.5 8.7-4.7 3.1-11.1 8.1-14.3 11.2-3.3 3.1-8.1 8.5-10.8 12.1-2.6 3.6-4.8 6.9-4.9 7.5 0 0.5 8.6 9.5 19.1 20l19.1 19c8-9.3 13-14.7 16.3-18.1 3.7-3.7 8.5-7.3 12.5-9.2 3.6-1.8 9.6-3.8 13.5-4.4 5.4-0.9 8.8-0.9 15 0 4.4 0.7 10.7 2.5 14 4 3.3 1.6 8.7 5.3 12 8.4 3.3 3 7.4 7.7 9.2 10.4 1.8 2.7 4.2 7.6 5.3 10.9 1.5 4.3 2.1 8.5 2.1 15 0 6.2-0.6 11-2 15.5-1.1 3.6-3.7 9.2-5.9 12.5-2.1 3.3-5.6 7.6-7.9 9.5-2.2 1.9-6.7 4.9-9.9 6.7-3.2 1.7-8.6 3.9-11.9 4.7-3.3 0.9-8.6 1.6-11.8 1.6-3.1 0-8.1-0.5-11-1.1-2.8-0.7-7.7-2.3-10.7-3.7-4.7-2.1-14-11-67.1-64.1-47.5-47.6-63.3-62.8-69.5-66.9-4.3-2.9-11.5-7.1-15.9-9.2-4.4-2.1-10.9-4.8-14.5-6-3.6-1.2-11.7-2.9-18-3.8-9.7-1.3-13.1-1.4-22-0.4-5.8 0.7-13.9 2.1-18 3.3-4.1 1.1-11.1 3.7-15.5 5.8-4.4 2-11.4 6-15.5 8.8-4.1 2.9-11.1 8.9-15.6 13.5-4.4 4.6-9.9 11-12.1 14.3-2.2 3.3-5.5 8.9-7.3 12.5-1.8 3.6-4.3 9.2-5.5 12.5-1.3 3.3-3.1 9.6-4 14-0.9 4.7-1.6 12.7-1.6 19.5 0 6.7 0.7 14.8 1.6 19.5 0.9 4.4 2.6 10.7 3.7 14 1.1 3.3 3.7 9.4 5.7 13.5 2 4.1 5.9 10.9 8.6 15 2.8 4.1 7.9 10.4 11.5 14 3.6 3.6 10.8 9.4 16 12.8 5.3 3.5 14 8 19.5 10.2 5.5 2.1 14 4.6 19 5.5 4.9 0.8 13.3 1.5 18.5 1.5 5.2 0 13.3-0.6 18-1.5 4.7-0.8 12.1-2.6 16.5-4.1 4.4-1.4 10.7-4 14-5.7 3.3-1.6 7.8-4.2 10-5.6 2.2-1.4 6.3-4.4 9-6.6 2.8-2.2 8-7.2 11.5-11.2 3.6-3.9 7.2-8.4 8.2-10l1.6-2.8-38.8-37.5c-6.6 7.4-11.1 12.1-14.2 15.2-3.2 3.2-8.2 7-11.1 8.4-2.8 1.5-7.2 3.3-9.7 4-2.5 0.7-7.2 1.6-10.5 1.9-3.8 0.4-8.6 0.1-13-0.8-3.9-0.8-9.9-2.9-13.5-4.7-3.6-1.9-9-5.8-12.1-8.9-3.1-3.1-7-8.4-8.7-11.9-1.8-3.4-3.9-8.8-4.7-12-0.8-3.1-1.5-8.1-1.5-11 0-2.8 0.5-7.6 1.1-10.5 0.6-2.8 2.4-8 4-11.5 1.6-3.4 5.3-8.8 8.2-12 3-3.1 7.8-7.3 10.8-9.2 3-1.9 8-4.2 11.1-5.2 3.6-1.1 9-1.8 14-1.8 4.7 0 10.7 0.7 13.8 1.6 3 0.9 8 3.1 11 4.9 3.7 2.3 25.4 23.3 67.5 65.6 34.1 34.2 64.2 63.6 67 65.4 2.7 1.7 7.5 4.4 10.5 6 3 1.5 9.1 4 13.5 5.6 4.4 1.5 11.6 3.5 16 4.4 4.7 1 12.5 1.7 19 1.7 6 0 14.1-0.6 18-1.2 3.8-0.6 11-2.4 16-4 4.9-1.6 12.8-5 17.5-7.6 4.7-2.6 10.5-6.2 13-8.1 2.5-1.9 7.4-6.2 10.8-9.6 3.5-3.4 9.1-10.3 12.4-15.2 3.3-5 7.2-11.5 8.5-14.5 1.4-3 3.6-8.7 4.9-12.5 1.4-3.9 3.1-11.1 3.9-16 1.2-7.4 1.5-25.6 1.6-102.7l0.1-93.6c-40.8-13.6-53.2-17.7-53.8-18-0.8-0.3-1.1 14.6-1.2 52.2zm-508.2-42.4c-3.6 0.5-10.8 1.9-16 3.1-5.2 1.2-13 3.5-17.3 5-4.2 1.6-10.1 4.1-13 5.5-2.8 1.4-7.9 4.2-11.2 6.2-3.3 2-9.4 6.1-13.5 9.2-4.1 3.1-11.3 9.5-16 14.2-4.7 4.7-11.1 12.1-14.2 16.4-3.1 4.4-8.3 12.8-11.4 18.9-3.2 6-7.2 15.3-9 20.5-1.7 5.2-3.6 12-4.2 15-0.6 3-1.6 8.2-2.2 11.5-0.6 3.3-1 12.3-1 20-0.1 9.4 0.6 17.8 1.9 25.5 1.1 6.3 3.3 15.5 5 20.5 1.6 4.9 4.6 12.6 6.7 17 2 4.4 5.2 10.5 7.1 13.5 2 3 6.1 8.9 9.2 13 3.1 4.1 9.5 11.3 14.2 16 4.8 4.7 12.2 11.1 16.5 14.2 4.4 3.1 12.2 7.9 17.4 10.7 5.2 2.7 12.6 6.1 16.5 7.6 3.8 1.4 11.3 3.7 16.5 5 5.2 1.3 14 2.9 19.5 3.6 6.2 0.7 15 1 23 0.6 7.1-0.4 17.3-1.6 22.5-2.7 5.2-1.1 13.5-3.4 18.5-5.1 4.9-1.7 13.7-5.5 19.5-8.5 5.8-3 14.1-8.1 18.5-11.2 4.3-3.1 12-9.8 17-14.7 5.1-5 11.3-11.9 13.9-15.5 4.5-6.2 4.6-6.6 2.9-8.1-1-0.9-11.6-8.2-23.6-16.3-20.8-14-21.8-14.5-23.5-12.8-1.1 0.9-3.9 4.1-6.3 7.1-2.4 3-8 8.1-12.4 11.4-4.4 3.2-11.6 7.6-16 9.7-4.4 2.1-12.1 4.8-17 6.1-6.8 1.7-11.9 2.2-21 2.2-7.9 0-14.4-0.5-19-1.7-3.9-0.9-9.5-2.6-12.5-3.7-3-1.1-8.2-3.5-11.5-5.4-3.3-1.8-9.2-5.8-13-8.8-3.9-3.1-9.3-8.4-12.2-11.9-2.8-3.5-6.9-9.7-9.2-13.8-2.2-4.1-5.1-10.7-6.5-14.5-1.3-3.9-3-10.2-3.7-14-0.7-4.4-1-11.4-0.6-19 0.4-7.4 1.3-14.7 2.6-19 1.1-3.9 3.2-9.7 4.6-13 1.5-3.3 4.6-8.9 7-12.5 2.4-3.6 6.9-9.2 10.2-12.5 3.2-3.3 8.7-8.1 12.3-10.7 3.6-2.6 9.9-6.2 14-8.2 4.1-1.9 11.5-4.5 16.5-5.7 7-1.7 11.8-2.2 21.5-2.2 9 0.1 14.6 0.7 20 2.1 4.1 1.1 10.9 3.4 15 5.2 4.1 1.7 10.4 5.1 14 7.5 3.6 2.4 8.5 6.3 11 8.7 2.5 2.3 6.6 6.8 9.2 9.8l4.6 5.5c36.6-24.8 47.3-32.2 47.3-32.5 0-0.3-2.1-3.4-4.7-7-2.6-3.6-8.8-10.6-13.9-15.5-5-5-12.7-11.6-17-14.7-4.4-3.1-12.7-8.1-18.5-11.2-5.8-3-14.6-6.8-19.5-8.6-5-1.7-13.3-4-18.5-5.1-6.3-1.3-14.8-2.1-25-2.4-8.5-0.2-18.4 0-22 0.5zm881 80.7c-1.4 0.2-6.1 1.1-10.5 1.9-4.4 0.8-11.4 2.7-15.5 4.1-4.1 1.4-10.1 3.9-13.3 5.4-3.1 1.6-8.1 4.4-11 6.3-2.8 1.8-7.8 5.4-11 8-3.1 2.5-8.6 7.6-12.1 11.3-3.5 3.8-18.2 20.1-32.6 36.3-14.5 16.2-32.2 36-39.4 44-7.2 8-16.9 18.4-21.6 23.1-5.9 6-10.5 9.6-15 11.9-3.6 1.8-9.7 3.9-13.5 4.7-3.9 0.8-9.6 1.3-12.8 1.1-3.1-0.2-5.6-0.6-5.5-0.9 0.2-0.4 22.1-24.4 48.8-53.4 26.7-29 48.8-53.2 49.1-53.9 0.4-0.6-4.7-6.1-11.5-12.4-6.6-6.2-15-13.3-18.6-15.8-3.6-2.5-10.3-6.4-15-8.6-4.7-2.2-12.8-5.2-18-6.6-8.3-2.2-11.6-2.5-25.5-2.5-14.2 0-17.1 0.3-26 2.7-5.5 1.4-14.5 4.8-20 7.6-5.5 2.7-13.1 7.3-17 10.2-3.8 2.9-9.2 7.5-12 10.3-2.7 2.7-7.1 7.9-9.7 11.5-2.5 3.6-6.5 10.1-8.7 14.5-2.3 4.4-5.2 11.4-6.6 15.5-1.3 4.1-3 10.6-3.6 14.5-0.7 4.3-1 12.3-0.6 20.5 0.3 9.1 1.2 16.1 2.6 21.5 1.2 4.4 3.1 10.5 4.3 13.5 1.1 3 4.5 9.7 7.5 14.7 3.8 6.8 8 12 15 19.2 5.4 5.4 12.7 11.8 16.3 14.1 3.6 2.4 9.9 5.9 14 7.8 4.1 1.9 10.2 4.3 13.5 5.2 3.3 1 8.7 2.4 12 3.1 3.3 0.7 11.4 1.3 18 1.3 7.1 0 15.2-0.7 20-1.6 4.4-0.9 10.2-2.4 13-3.3 2.7-0.9 7.7-3 11-4.5 3.3-1.6 9.6-5.2 14-8 5.3-3.4 12.7-9.9 22-19.4 7.7-7.8 29.1-30.6 47.5-50.7 18.4-20.1 37.1-40.5 41.5-45.4 4.4-4.8 10-10.2 12.5-11.8 2.5-1.7 7-4.3 10-5.8 3-1.5 8.2-3.4 11.5-4.3 3.3-0.9 7.7-1.6 9.7-1.6 2.1 0 4.5-0.2 5.3-0.5 1.3-0.4 1.5-4.4 1.5-27.5 0-23.1-0.2-27.1-1.5-27.5-0.8-0.3-3.4-0.4-5.8-0.4-2.3 0.1-5.3 0.4-6.7 0.6zm-213.5 58c2.2-0.2 5.8-0.4 8-0.5 2.2-0.1 5 0 6.2 0.3 2.2 0.5 1.9 0.9-3.4 7.2-3.2 3.8-7.6 8.8-9.9 11.3-2.2 2.5-6.1 6.7-8.6 9.5-2.6 2.7-10.8 11.9-18.4 20.3-7.7 8.3-14.1 14.9-14.4 14.6-0.3-0.3-0.6-2.3-0.7-4.3-0.2-2-0.5-4.7-0.8-6.1-0.2-1.4 0.2-5.7 1.1-9.5 0.8-3.9 1.7-8.4 2.1-10 0.3-1.7 1.4-4.2 2.4-5.8 1.1-1.5 1.9-3.2 1.9-3.7 0-0.6 0.6-1.7 1.2-2.5 0.7-0.9 1.9-2.2 2.5-3 0.7-0.8 1.3-2 1.3-2.5 0-0.6 1.5-2.1 3.2-3.5 1.8-1.3 3.9-2.5 4.5-2.5 0.7 0 1.4-0.3 1.5-0.8 0.2-0.4 3-2 6.3-3.6 3.3-1.5 6.9-3.2 8-3.7 1.1-0.5 3.8-1 6-1.2zm316.5-55.6c-4.7 0.4-11.4 1.5-15 2.4-3.6 0.9-8.8 2.4-11.5 3.4-2.8 1-8.5 3.6-12.9 5.7-4.3 2.2-12.2 7.3-17.5 11.4-7.4 5.8-11.5 10-17.9 18.5-4.5 6.1-8.3 11.6-8.2 12.2 0 0.7-0.5 1.3-1 1.3-0.6 0-0.8 0.4-0.5 1 0.3 0.5 0 1-0.5 1-0.6 0-0.8 0.4-0.5 1 0.3 0.5 0 1-0.5 1-0.6 0-0.9 0.3-0.8 0.7 0.1 0.5-0.3 1.9-0.9 3.3-0.6 1.4-1.3 3.2-1.6 4-0.2 0.8-0.5 1.9-0.7 2.5-0.1 0.5-0.7 1.6-1.3 2.3-0.7 0.7-0.8 1.3-0.2 1.2 0.6-0.1 0.5 0.4-0.1 1.2-0.6 0.7-1.7 3.5-2.3 6.3-0.7 2.7-1.5 9.3-2 14.5-0.4 5.2-0.4 14 0.1 19.5 0.4 5.5 1.9 14 3.3 19 1.4 4.9 4.5 13 6.9 18 2.4 4.9 7.1 12.6 10.3 17 3.3 4.4 8.8 10.7 12.4 13.9 3.5 3.2 8.9 7.6 11.9 9.6 3 2.1 8.3 5.1 11.7 6.9 3.5 1.7 8.7 4 11.5 5 2.9 1.1 8.2 2.8 11.8 3.8 5 1.3 10.4 1.7 24 1.8 15.3 0 18.6-0.3 26.5-2.4 4.9-1.3 11.8-3.6 15.2-5.2l6.3-2.9v9h56l-0.5-208.5c-31.8-0.5-44.3-0.4-48.3-0.1l-7.2 0.6c0 8.5-0.1 11-0.3 11-0.1 0-2.3-1.1-5-2.5-2.6-1.4-4.7-2.2-4.7-1.8 0.1 0.5-0.6 0.1-1.5-0.7-0.9-0.8-1.5-1.1-1.5-0.5 0 0.5-0.6 0.3-1.5-0.5-0.9-0.8-1.6-1.2-1.5-0.8 0 0.5-0.8 0.4-1.8-0.1-0.9-0.5-3.1-1.2-4.7-1.5-1.7-0.3-4.1-0.8-5.5-1.1-1.4-0.3-5.2-0.8-8.5-1.1-3.3-0.2-7.1-0.6-8.5-0.8-1.4-0.1-6.3 0.1-11 0.5zm-2 56.2c3-0.6 7.3-1.2 9.5-1.2 2.2 0 6.9 0.5 10.5 1.3 3.6 0.7 9.2 2.6 12.5 4.2 3.2 1.6 8.6 5.4 12 8.5 3.3 3.2 7.4 8.1 9.2 11 1.8 3 3.9 8.1 4.8 11.4 0.8 3.3 1.5 9.4 1.5 13.5 0 4.1-0.7 10-1.6 13-0.9 3-3 8.2-4.7 11.4-1.8 3.3-5.7 8.4-8.7 11.4-3.3 3.2-8.3 6.7-12.5 8.8-4.4 2.1-9.8 3.8-14.5 4.5-5.5 0.8-9.4 0.8-14.5-0.1-3.9-0.6-10.2-2.6-14-4.5-3.9-1.8-9-5.1-11.5-7.2-2.5-2.2-6.3-6.6-8.4-9.9-2.2-3.2-4.8-8.4-5.8-11.4-1-3-2.1-8-2.4-11-0.4-3-0.1-8.9 0.6-13 0.8-4.5 2.7-10.3 4.8-14.5 2.3-4.5 5.8-9.2 9.6-13 3.4-3.3 8.8-7.3 12.1-9 3.3-1.6 8.5-3.5 11.5-4.2z"/>
+                </svg>
+            </div>
+            <div class="hidden md:flex gap-8 text-sm font-medium text-textMuted">
+                <a href="#features" class="hover:text-accentLight transition-colors">Features</a>
+                <a href="#integrations" class="hover:text-accentLight transition-colors">Integrations</a>
+                <a href="#ai" class="hover:text-accentLight transition-colors">AI Engine</a>
+            </div>
+            <a href="https://github.com/AriBerisha/codera-community" target="_blank" class="btn-primary shrink-0 text-white px-5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2">
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.58 2 12.22c0 4.5 2.87 8.32 6.84 9.66.5.1.66-.22.66-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.57 2.35 1.12 2.92.86.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.05 0-1.11.38-2.01 1.03-2.72-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.04A9.3 9.3 0 0 1 12 6.84c.85 0 1.71.12 2.51.36 1.91-1.32 2.75-1.04 2.75-1.04.55 1.42.2 2.47.1 2.73.64.71 1.03 1.61 1.03 2.72 0 3.92-2.35 4.78-4.59 5.04.36.32.68.95.68 1.92 0 1.39-.01 2.5-.01 2.84 0 .27.18.6.67.49A10.23 10.23 0 0 0 22 12.22C22 6.58 17.52 2 12 2Z"/>
+                </svg>
+                <span class="hidden sm:inline">GitHub</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center px-6 pt-32 pb-16 md:pt-36 md:pb-24 overflow-hidden">
+        <div class="hero-glow absolute inset-0"></div>
+        <div class="relative z-10 w-full max-w-5xl mx-auto">
+            <div class="flex flex-col items-center text-center">
+                <!-- Logo -->
+                <div class="mb-8 flex justify-center logo-float">
+                    <div class="relative">
+                        <div class="absolute inset-0 bg-accent rounded-full blur-[80px] opacity-20"></div>
+<svg class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 relative" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="heroLogoGrad" x1="27" y1="209" x2="1252" y2="512" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#68c2ff"/>
+                                <stop offset="1" stop-color="#007acc"/>
+                            </linearGradient>
+                        </defs>
+                        <path fill="url(#heroLogoGrad)" fill-rule="evenodd" d="m664.2 261.4c-0.1 28.9-0.4 52.6-0.7 52.6-0.3 0-2-0.7-3.8-1.7-1.7-0.9-7-2.9-11.7-4.5-4.7-1.5-12.1-3.5-16.5-4.3-4.4-0.9-12.5-1.6-18-1.6-5.5 0-12.9 0.5-16.5 1-3.6 0.6-9.4 1.9-13 3-3.6 1.1-9.7 3.4-13.5 5.1-3.9 1.8-10.8 5.7-15.5 8.7-4.7 3.1-11.1 8.1-14.3 11.2-3.3 3.1-8.1 8.5-10.8 12.1-2.6 3.6-4.8 6.9-4.9 7.5 0 0.5 8.6 9.5 19.1 20l19.1 19c8-9.3 13-14.7 16.3-18.1 3.7-3.7 8.5-7.3 12.5-9.2 3.6-1.8 9.6-3.8 13.5-4.4 5.4-0.9 8.8-0.9 15 0 4.4 0.7 10.7 2.5 14 4 3.3 1.6 8.7 5.3 12 8.4 3.3 3 7.4 7.7 9.2 10.4 1.8 2.7 4.2 7.6 5.3 10.9 1.5 4.3 2.1 8.5 2.1 15 0 6.2-0.6 11-2 15.5-1.1 3.6-3.7 9.2-5.9 12.5-2.1 3.3-5.6 7.6-7.9 9.5-2.2 1.9-6.7 4.9-9.9 6.7-3.2 1.7-8.6 3.9-11.9 4.7-3.3 0.9-8.6 1.6-11.8 1.6-3.1 0-8.1-0.5-11-1.1-2.8-0.7-7.7-2.3-10.7-3.7-4.7-2.1-14-11-67.1-64.1-47.5-47.6-63.3-62.8-69.5-66.9-4.3-2.9-11.5-7.1-15.9-9.2-4.4-2.1-10.9-4.8-14.5-6-3.6-1.2-11.7-2.9-18-3.8-9.7-1.3-13.1-1.4-22-0.4-5.8 0.7-13.9 2.1-18 3.3-4.1 1.1-11.1 3.7-15.5 5.8-4.4 2-11.4 6-15.5 8.8-4.1 2.9-11.1 8.9-15.6 13.5-4.4 4.6-9.9 11-12.1 14.3-2.2 3.3-5.5 8.9-7.3 12.5-1.8 3.6-4.3 9.2-5.5 12.5-1.3 3.3-3.1 9.6-4 14-0.9 4.7-1.6 12.7-1.6 19.5 0 6.7 0.7 14.8 1.6 19.5 0.9 4.4 2.6 10.7 3.7 14 1.1 3.3 3.7 9.4 5.7 13.5 2 4.1 5.9 10.9 8.6 15 2.8 4.1 7.9 10.4 11.5 14 3.6 3.6 10.8 9.4 16 12.8 5.3 3.5 14 8 19.5 10.2 5.5 2.1 14 4.6 19 5.5 4.9 0.8 13.3 1.5 18.5 1.5 5.2 0 13.3-0.6 18-1.5 4.7-0.8 12.1-2.6 16.5-4.1 4.4-1.4 10.7-4 14-5.7 3.3-1.6 7.8-4.2 10-5.6 2.2-1.4 6.3-4.4 9-6.6 2.8-2.2 8-7.2 11.5-11.2 3.6-3.9 7.2-8.4 8.2-10l1.6-2.8-38.8-37.5c-6.6 7.4-11.1 12.1-14.2 15.2-3.2 3.2-8.2 7-11.1 8.4-2.8 1.5-7.2 3.3-9.7 4-2.5 0.7-7.2 1.6-10.5 1.9-3.8 0.4-8.6 0.1-13-0.8-3.9-0.8-9.9-2.9-13.5-4.7-3.6-1.9-9-5.8-12.1-8.9-3.1-3.1-7-8.4-8.7-11.9-1.8-3.4-3.9-8.8-4.7-12-0.8-3.1-1.5-8.1-1.5-11 0-2.8 0.5-7.6 1.1-10.5 0.6-2.8 2.4-8 4-11.5 1.6-3.4 5.3-8.8 8.2-12 3-3.1 7.8-7.3 10.8-9.2 3-1.9 8-4.2 11.1-5.2 3.6-1.1 9-1.8 14-1.8 4.7 0 10.7 0.7 13.8 1.6 3 0.9 8 3.1 11 4.9 3.7 2.3 25.4 23.3 67.5 65.6 34.1 34.2 64.2 63.6 67 65.4 2.7 1.7 7.5 4.4 10.5 6 3 1.5 9.1 4 13.5 5.6 4.4 1.5 11.6 3.5 16 4.4 4.7 1 12.5 1.7 19 1.7 6 0 14.1-0.6 18-1.2 3.8-0.6 11-2.4 16-4 4.9-1.6 12.8-5 17.5-7.6 4.7-2.6 10.5-6.2 13-8.1 2.5-1.9 7.4-6.2 10.8-9.6 3.5-3.4 9.1-10.3 12.4-15.2 3.3-5 7.2-11.5 8.5-14.5 1.4-3 3.6-8.7 4.9-12.5 1.4-3.9 3.1-11.1 3.9-16 1.2-7.4 1.5-25.6 1.6-102.7l0.1-93.6c-40.8-13.6-53.2-17.7-53.8-18-0.8-0.3-1.1 14.6-1.2 52.2zm-508.2-42.4c-3.6 0.5-10.8 1.9-16 3.1-5.2 1.2-13 3.5-17.3 5-4.2 1.6-10.1 4.1-13 5.5-2.8 1.4-7.9 4.2-11.2 6.2-3.3 2-9.4 6.1-13.5 9.2-4.1 3.1-11.3 9.5-16 14.2-4.7 4.7-11.1 12.1-14.2 16.4-3.1 4.4-8.3 12.8-11.4 18.9-3.2 6-7.2 15.3-9 20.5-1.7 5.2-3.6 12-4.2 15-0.6 3-1.6 8.2-2.2 11.5-0.6 3.3-1 12.3-1 20-0.1 9.4 0.6 17.8 1.9 25.5 1.1 6.3 3.3 15.5 5 20.5 1.6 4.9 4.6 12.6 6.7 17 2 4.4 5.2 10.5 7.1 13.5 2 3 6.1 8.9 9.2 13 3.1 4.1 9.5 11.3 14.2 16 4.8 4.7 12.2 11.1 16.5 14.2 4.4 3.1 12.2 7.9 17.4 10.7 5.2 2.7 12.6 6.1 16.5 7.6 3.8 1.4 11.3 3.7 16.5 5 5.2 1.3 14 2.9 19.5 3.6 6.2 0.7 15 1 23 0.6 7.1-0.4 17.3-1.6 22.5-2.7 5.2-1.1 13.5-3.4 18.5-5.1 4.9-1.7 13.7-5.5 19.5-8.5 5.8-3 14.1-8.1 18.5-11.2 4.3-3.1 12-9.8 17-14.7 5.1-5 11.3-11.9 13.9-15.5 4.5-6.2 4.6-6.6 2.9-8.1-1-0.9-11.6-8.2-23.6-16.3-20.8-14-21.8-14.5-23.5-12.8-1.1 0.9-3.9 4.1-6.3 7.1-2.4 3-8 8.1-12.4 11.4-4.4 3.2-11.6 7.6-16 9.7-4.4 2.1-12.1 4.8-17 6.1-6.8 1.7-11.9 2.2-21 2.2-7.9 0-14.4-0.5-19-1.7-3.9-0.9-9.5-2.6-12.5-3.7-3-1.1-8.2-3.5-11.5-5.4-3.3-1.8-9.2-5.8-13-8.8-3.9-3.1-9.3-8.4-12.2-11.9-2.8-3.5-6.9-9.7-9.2-13.8-2.2-4.1-5.1-10.7-6.5-14.5-1.3-3.9-3-10.2-3.7-14-0.7-4.4-1-11.4-0.6-19 0.4-7.4 1.3-14.7 2.6-19 1.1-3.9 3.2-9.7 4.6-13 1.5-3.3 4.6-8.9 7-12.5 2.4-3.6 6.9-9.2 10.2-12.5 3.2-3.3 8.7-8.1 12.3-10.7 3.6-2.6 9.9-6.2 14-8.2 4.1-1.9 11.5-4.5 16.5-5.7 7-1.7 11.8-2.2 21.5-2.2 9 0.1 14.6 0.7 20 2.1 4.1 1.1 10.9 3.4 15 5.2 4.1 1.7 10.4 5.1 14 7.5 3.6 2.4 8.5 6.3 11 8.7 2.5 2.3 6.6 6.8 9.2 9.8l4.6 5.5c36.6-24.8 47.3-32.2 47.3-32.5 0-0.3-2.1-3.4-4.7-7-2.6-3.6-8.8-10.6-13.9-15.5-5-5-12.7-11.6-17-14.7-4.4-3.1-12.7-8.1-18.5-11.2-5.8-3-14.6-6.8-19.5-8.6-5-1.7-13.3-4-18.5-5.1-6.3-1.3-14.8-2.1-25-2.4-8.5-0.2-18.4 0-22 0.5zm881 80.7c-1.4 0.2-6.1 1.1-10.5 1.9-4.4 0.8-11.4 2.7-15.5 4.1-4.1 1.4-10.1 3.9-13.3 5.4-3.1 1.6-8.1 4.4-11 6.3-2.8 1.8-7.8 5.4-11 8-3.1 2.5-8.6 7.6-12.1 11.3-3.5 3.8-18.2 20.1-32.6 36.3-14.5 16.2-32.2 36-39.4 44-7.2 8-16.9 18.4-21.6 23.1-5.9 6-10.5 9.6-15 11.9-3.6 1.8-9.7 3.9-13.5 4.7-3.9 0.8-9.6 1.3-12.8 1.1-3.1-0.2-5.6-0.6-5.5-0.9 0.2-0.4 22.1-24.4 48.8-53.4 26.7-29 48.8-53.2 49.1-53.9 0.4-0.6-4.7-6.1-11.5-12.4-6.6-6.2-15-13.3-18.6-15.8-3.6-2.5-10.3-6.4-15-8.6-4.7-2.2-12.8-5.2-18-6.6-8.3-2.2-11.6-2.5-25.5-2.5-14.2 0-17.1 0.3-26 2.7-5.5 1.4-14.5 4.8-20 7.6-5.5 2.7-13.1 7.3-17 10.2-3.8 2.9-9.2 7.5-12 10.3-2.7 2.7-7.1 7.9-9.7 11.5-2.5 3.6-6.5 10.1-8.7 14.5-2.3 4.4-5.2 11.4-6.6 15.5-1.3 4.1-3 10.6-3.6 14.5-0.7 4.3-1 12.3-0.6 20.5 0.3 9.1 1.2 16.1 2.6 21.5 1.2 4.4 3.1 10.5 4.3 13.5 1.1 3 4.5 9.7 7.5 14.7 3.8 6.8 8 12 15 19.2 5.4 5.4 12.7 11.8 16.3 14.1 3.6 2.4 9.9 5.9 14 7.8 4.1 1.9 10.2 4.3 13.5 5.2 3.3 1 8.7 2.4 12 3.1 3.3 0.7 11.4 1.3 18 1.3 7.1 0 15.2-0.7 20-1.6 4.4-0.9 10.2-2.4 13-3.3 2.7-0.9 7.7-3 11-4.5 3.3-1.6 9.6-5.2 14-8 5.3-3.4 12.7-9.9 22-19.4 7.7-7.8 29.1-30.6 47.5-50.7 18.4-20.1 37.1-40.5 41.5-45.4 4.4-4.8 10-10.2 12.5-11.8 2.5-1.7 7-4.3 10-5.8 3-1.5 8.2-3.4 11.5-4.3 3.3-0.9 7.7-1.6 9.7-1.6 2.1 0 4.5-0.2 5.3-0.5 1.3-0.4 1.5-4.4 1.5-27.5 0-23.1-0.2-27.1-1.5-27.5-0.8-0.3-3.4-0.4-5.8-0.4-2.3 0.1-5.3 0.4-6.7 0.6zm-213.5 58c2.2-0.2 5.8-0.4 8-0.5 2.2-0.1 5 0 6.2 0.3 2.2 0.5 1.9 0.9-3.4 7.2-3.2 3.8-7.6 8.8-9.9 11.3-2.2 2.5-6.1 6.7-8.6 9.5-2.6 2.7-10.8 11.9-18.4 20.3-7.7 8.3-14.1 14.9-14.4 14.6-0.3-0.3-0.6-2.3-0.7-4.3-0.2-2-0.5-4.7-0.8-6.1-0.2-1.4 0.2-5.7 1.1-9.5 0.8-3.9 1.7-8.4 2.1-10 0.3-1.7 1.4-4.2 2.4-5.8 1.1-1.5 1.9-3.2 1.9-3.7 0-0.6 0.6-1.7 1.2-2.5 0.7-0.9 1.9-2.2 2.5-3 0.7-0.8 1.3-2 1.3-2.5 0-0.6 1.5-2.1 3.2-3.5 1.8-1.3 3.9-2.5 4.5-2.5 0.7 0 1.4-0.3 1.5-0.8 0.2-0.4 3-2 6.3-3.6 3.3-1.5 6.9-3.2 8-3.7 1.1-0.5 3.8-1 6-1.2zm316.5-55.6c-4.7 0.4-11.4 1.5-15 2.4-3.6 0.9-8.8 2.4-11.5 3.4-2.8 1-8.5 3.6-12.9 5.7-4.3 2.2-12.2 7.3-17.5 11.4-7.4 5.8-11.5 10-17.9 18.5-4.5 6.1-8.3 11.6-8.2 12.2 0 0.7-0.5 1.3-1 1.3-0.6 0-0.8 0.4-0.5 1 0.3 0.5 0 1-0.5 1-0.6 0-0.8 0.4-0.5 1 0.3 0.5 0 1-0.5 1-0.6 0-0.9 0.3-0.8 0.7 0.1 0.5-0.3 1.9-0.9 3.3-0.6 1.4-1.3 3.2-1.6 4-0.2 0.8-0.5 1.9-0.7 2.5-0.1 0.5-0.7 1.6-1.3 2.3-0.7 0.7-0.8 1.3-0.2 1.2 0.6-0.1 0.5 0.4-0.1 1.2-0.6 0.7-1.7 3.5-2.3 6.3-0.7 2.7-1.5 9.3-2 14.5-0.4 5.2-0.4 14 0.1 19.5 0.4 5.5 1.9 14 3.3 19 1.4 4.9 4.5 13 6.9 18 2.4 4.9 7.1 12.6 10.3 17 3.3 4.4 8.8 10.7 12.4 13.9 3.5 3.2 8.9 7.6 11.9 9.6 3 2.1 8.3 5.1 11.7 6.9 3.5 1.7 8.7 4 11.5 5 2.9 1.1 8.2 2.8 11.8 3.8 5 1.3 10.4 1.7 24 1.8 15.3 0 18.6-0.3 26.5-2.4 4.9-1.3 11.8-3.6 15.2-5.2l6.3-2.9v9h56l-0.5-208.5c-31.8-0.5-44.3-0.4-48.3-0.1l-7.2 0.6c0 8.5-0.1 11-0.3 11-0.1 0-2.3-1.1-5-2.5-2.6-1.4-4.7-2.2-4.7-1.8 0.1 0.5-0.6 0.1-1.5-0.7-0.9-0.8-1.5-1.1-1.5-0.5 0 0.5-0.6 0.3-1.5-0.5-0.9-0.8-1.6-1.2-1.5-0.8 0 0.5-0.8 0.4-1.8-0.1-0.9-0.5-3.1-1.2-4.7-1.5-1.7-0.3-4.1-0.8-5.5-1.1-1.4-0.3-5.2-0.8-8.5-1.1-3.3-0.2-7.1-0.6-8.5-0.8-1.4-0.1-6.3 0.1-11 0.5zm-2 56.2c3-0.6 7.3-1.2 9.5-1.2 2.2 0 6.9 0.5 10.5 1.3 3.6 0.7 9.2 2.6 12.5 4.2 3.2 1.6 8.6 5.4 12 8.5 3.3 3.2 7.4 8.1 9.2 11 1.8 3 3.9 8.1 4.8 11.4 0.8 3.3 1.5 9.4 1.5 13.5 0 4.1-0.7 10-1.6 13-0.9 3-3 8.2-4.7 11.4-1.8 3.3-5.7 8.4-8.7 11.4-3.3 3.2-8.3 6.7-12.5 8.8-4.4 2.1-9.8 3.8-14.5 4.5-5.5 0.8-9.4 0.8-14.5-0.1-3.9-0.6-10.2-2.6-14-4.5-3.9-1.8-9-5.1-11.5-7.2-2.5-2.2-6.3-6.6-8.4-9.9-2.2-3.2-4.8-8.4-5.8-11.4-1-3-2.1-8-2.4-11-0.4-3-0.1-8.9 0.6-13 0.8-4.5 2.7-10.3 4.8-14.5 2.3-4.5 5.8-9.2 9.6-13 3.4-3.3 8.8-7.3 12.1-9 3.3-1.6 8.5-3.5 11.5-4.2z"/>
+                </svg>
+                    </div>
+                </div>
+
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs font-medium text-accentLight mb-6 border border-accent/20">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accentLight opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-accentLight"></span>
+                    </span>
+                    Open Source &middot; Community Edition
+                </div>
+
+                <h1 class="max-w-4xl text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight mb-6 leading-[1.02] text-white text-center">
+                    AI-Powered <br>
+                    <span class="gradient-text glow-text">Code Intelligence</span>
+                </h1>
+
+                <p class="max-w-3xl mx-auto text-base md:text-lg text-textMuted leading-relaxed text-center mb-10">
+                    Connect GitLab, GitHub, and your dev tools into one intelligent platform. Chat with AI that understands your codebase, references files and lines, and helps your team ship faster.
+                </p>
+
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+                    <a href="https://github.com/AriBerisha/codera-community" target="_blank" class="w-full sm:w-auto btn-primary text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.58 2 12.22c0 4.5 2.87 8.32 6.84 9.66.5.1.66-.22.66-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.57 2.35 1.12 2.92.86.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.05 0-1.11.38-2.01 1.03-2.72-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.04A9.3 9.3 0 0 1 12 6.84c.85 0 1.71.12 2.51.36 1.91-1.32 2.75-1.04 2.75-1.04.55 1.42.2 2.47.1 2.73.64.71 1.03 1.61 1.03 2.72 0 3.92-2.35 4.78-4.59 5.04.36.32.68.95.68 1.92 0 1.39-.01 2.5-.01 2.84 0 .27.18.6.67.49A10.23 10.23 0 0 0 22 12.22C22 6.58 17.52 2 12 2Z"/>
+                </svg>
+                        Get Started
+                    </a>
+                    <a href="#features" class="w-full sm:w-auto glass hover:bg-white/5 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-accentLight"></i>
+                        Explore Features
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Integration Marquee -->
+    <div id="integrations" class="py-10 border-y border-borderDark/50 bg-black/20 overflow-hidden">
+        <div class="flex gap-12 animate-marquee whitespace-nowrap items-center opacity-25 hover:opacity-80 transition-opacity duration-700">
+            <div class="flex gap-16 text-xl font-bold tracking-widest uppercase text-textMuted">
+                <span>GitLab</span> <span>GitHub</span> <span>Bitbucket</span> <span>Jira</span> <span>Slack</span> <span>Confluence</span> <span>Docker</span> <span>OpenAI</span> <span>Claude</span> <span>Ollama</span>
+            </div>
+            <div class="flex gap-16 text-xl font-bold tracking-widest uppercase text-textMuted">
+                <span>GitLab</span> <span>GitHub</span> <span>Bitbucket</span> <span>Jira</span> <span>Slack</span> <span>Confluence</span> <span>Docker</span> <span>OpenAI</span> <span>Claude</span> <span>Ollama</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Grid -->
+    <section id="features" class="py-24 px-6 max-w-7xl mx-auto">
+        <div class="text-center mb-16">
+            <div class="section-line mx-auto mb-6"></div>
+            <h2 class="text-3xl md:text-4xl font-bold mb-4 text-white">Everything You Need. <span class="text-accentLight">One Platform.</span></h2>
+            <p class="text-textMuted max-w-lg mx-auto">Index your repositories, chat with AI that understands your code, and manage your team from a single dashboard.</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6 items-stretch">
+            <!-- Card 1: Code Indexing -->
+            <div class="glass-card h-full p-8 rounded-2xl reveal">
+                <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-5 border border-accent/20">
+                    <i data-lucide="database" class="text-accentLight w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2 text-white">Code Indexing</h3>
+                <p class="text-textMuted text-sm leading-relaxed">
+                    Sync and index repositories from GitLab and GitHub. Full-text search with trigram matching finds any code pattern instantly.
+                </p>
+            </div>
+
+            <!-- Card 2: AI Chat -->
+            <div class="glass-card h-full p-8 rounded-2xl reveal" style="transition-delay: 100ms;">
+                <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-5 border border-accent/20">
+                    <i data-lucide="message-square" class="text-accentLight w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2 text-white">AI Code Chat</h3>
+                <p class="text-textMuted text-sm leading-relaxed">
+                    Chat with AI that cross-references your indexed code. Get answers with exact file paths and line numbers across your projects.
+                </p>
+            </div>
+
+            <!-- Card 3: Multi-Provider -->
+            <div class="glass-card h-full p-8 rounded-2xl reveal" style="transition-delay: 200ms;">
+                <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-5 border border-accent/20">
+                    <i data-lucide="cpu" class="text-accentLight w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2 text-white">Multi-Provider AI</h3>
+                <p class="text-textMuted text-sm leading-relaxed">
+                    Connect OpenRouter, OpenAI, Google, or run locally with Ollama. Switch models on the fly from admin settings.
+                </p>
+            </div>
+
+            <!-- Card 4: Team Management -->
+            <div class="glass-card h-full p-8 rounded-2xl reveal">
+                <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-5 border border-accent/20">
+                    <i data-lucide="users" class="text-accentLight w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2 text-white">Team Management</h3>
+                <p class="text-textMuted text-sm leading-relaxed">
+                    Admin and member roles with scoped access. First-time setup wizard gets your team online in minutes.
+                </p>
+            </div>
+
+            <!-- Card 5: Connectors -->
+            <div class="glass-card h-full p-8 rounded-2xl reveal" style="transition-delay: 100ms;">
+                <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-5 border border-accent/20">
+                    <i data-lucide="plug" class="text-accentLight w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2 text-white">Smart Connectors</h3>
+                <p class="text-textMuted text-sm leading-relaxed">
+                    GitLab and GitHub ready out of the box. Jira, Confluence, Slack, and Bitbucket integrations coming soon.
+                </p>
+            </div>
+
+            <!-- Card 6: Self-Hosted -->
+            <div class="glass-card h-full p-8 rounded-2xl reveal" style="transition-delay: 200ms;">
+                <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-5 border border-accent/20">
+                    <i data-lucide="server" class="text-accentLight w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2 text-white">Self-Hosted</h3>
+                <p class="text-textMuted text-sm leading-relaxed">
+                    Deploy with Docker Compose. Your code stays on your infrastructure. Full control over data and AI provider keys.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Spotlight Section -->
+    <section id="ai" class="py-24 px-6">
+        <div class="max-w-7xl mx-auto glass rounded-[2rem] overflow-hidden relative border-accent/10">
+            <div class="absolute inset-0 bg-gradient-to-br from-accent/5 to-accentLight/5 pointer-events-none"></div>
+            <div class="grid md:grid-cols-2 items-center">
+                <div class="p-10 md:p-16 lg:p-20">
+                    <div class="section-line mb-6"></div>
+                    <h2 class="text-3xl md:text-4xl font-bold mb-6 leading-tight text-white">AI That Actually <br><span class="text-accentLight">Knows Your Code</span></h2>
+                    <p class="text-textMuted mb-8 text-base leading-relaxed">
+                        Codera indexes your repositories and builds a searchable knowledge base. When you ask a question, the AI retrieves relevant code snippets and responds with precise file and line references.
+                    </p>
+                    <ul class="space-y-4 text-left">
+                        <li class="flex items-start gap-3 text-textPrimary font-medium text-sm">
+                            <div class="mt-0.5 w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
+                                <i data-lucide="check" class="text-accentLight w-3.5 h-3.5"></i>
+                            </div>
+                            Three-tier search: FTS + trigram + substring
+                        </li>
+                        <li class="flex items-start gap-3 text-textPrimary font-medium text-sm">
+                            <div class="mt-0.5 w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
+                                <i data-lucide="check" class="text-accentLight w-3.5 h-3.5"></i>
+                            </div>
+                            Responses cite exact files and line numbers
+                        </li>
+                        <li class="flex items-start gap-3 text-textPrimary font-medium text-sm">
+                            <div class="mt-0.5 w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
+                                <i data-lucide="check" class="text-accentLight w-3.5 h-3.5"></i>
+                            </div>
+                            Incremental re-indexing with SHA comparison
+                        </li>
+                        <li class="flex items-start gap-3 text-textPrimary font-medium text-sm">
+                            <div class="mt-0.5 w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
+                                <i data-lucide="check" class="text-accentLight w-3.5 h-3.5"></i>
+                            </div>
+                            Streaming responses with Vercel AI SDK
+                        </li>
+                    </ul>
+                </div>
+                <div class="relative p-12 flex justify-center items-center bg-midnight/50 min-h-[400px] md:min-h-[500px]">
+                    <!-- Animated AI Orb -->
+                    <div class="relative w-64 h-64 md:w-72 md:h-72">
+                        <div class="absolute inset-0 bg-accent rounded-full blur-[100px] opacity-20 animate-pulse"></div>
+                        <div class="absolute inset-0 flex items-center justify-center border border-accent/30 rounded-full" style="animation: orb-spin 15s linear infinite;"></div>
+                        <div class="absolute inset-8 flex items-center justify-center border border-accentLight/20 rounded-full" style="animation: orb-spin 20s linear infinite reverse;"></div>
+                        <div class="absolute inset-16 flex items-center justify-center border border-accent/10 rounded-full" style="animation: orb-spin 25s linear infinite;"></div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="w-28 h-28 md:w-32 md:h-32 bg-gradient-to-tr from-accent to-accentLight rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(0,122,204,0.4)]">
+                                <i data-lucide="sparkles" class="w-14 h-14 md:w-16 md:h-16 text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Stack Section -->
+    <section class="py-24 px-6 max-w-7xl mx-auto">
+        <div class="text-center mb-16">
+            <div class="section-line mx-auto mb-6"></div>
+            <h2 class="text-3xl md:text-4xl font-bold mb-4 text-white">Built With <span class="text-accentLight">Modern Tech</span></h2>
+            <p class="text-textMuted max-w-lg mx-auto">Production-ready stack designed for performance, type safety, and developer experience.</p>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
+            <div class="glass-card min-h-[120px] p-6 rounded-2xl text-center reveal flex flex-col justify-center">
+                <div class="text-2xl mb-2 font-bold text-accentLight">Next.js</div>
+                <p class="text-textMuted text-xs">App Router + Turbopack</p>
+            </div>
+            <div class="glass-card min-h-[120px] p-6 rounded-2xl text-center reveal flex flex-col justify-center" style="transition-delay: 50ms;">
+                <div class="text-2xl mb-2 font-bold text-accentLight">Prisma</div>
+                <p class="text-textMuted text-xs">Type-safe ORM</p>
+            </div>
+            <div class="glass-card min-h-[120px] p-6 rounded-2xl text-center reveal flex flex-col justify-center" style="transition-delay: 100ms;">
+                <div class="text-2xl mb-2 font-bold text-accentLight">PostgreSQL</div>
+                <p class="text-textMuted text-xs">FTS + pg_trgm</p>
+            </div>
+            <div class="glass-card min-h-[120px] p-6 rounded-2xl text-center reveal flex flex-col justify-center" style="transition-delay: 150ms;">
+                <div class="text-2xl mb-2 font-bold text-accentLight">AI SDK</div>
+                <p class="text-textMuted text-xs">Multi-provider streaming</p>
+            </div>
+            <div class="glass-card min-h-[120px] p-6 rounded-2xl text-center reveal flex flex-col justify-center">
+                <div class="text-2xl mb-2 font-bold text-accentLight">TypeScript</div>
+                <p class="text-textMuted text-xs">End-to-end type safety</p>
+            </div>
+            <div class="glass-card min-h-[120px] p-6 rounded-2xl text-center reveal flex flex-col justify-center" style="transition-delay: 50ms;">
+                <div class="text-2xl mb-2 font-bold text-accentLight">Auth.js</div>
+                <p class="text-textMuted text-xs">JWT + Credentials</p>
+            </div>
+            <div class="glass-card min-h-[120px] p-6 rounded-2xl text-center reveal flex flex-col justify-center" style="transition-delay: 100ms;">
+                <div class="text-2xl mb-2 font-bold text-accentLight">Tailwind</div>
+                <p class="text-textMuted text-xs">Utility-first CSS</p>
+            </div>
+            <div class="glass-card min-h-[120px] p-6 rounded-2xl text-center reveal flex flex-col justify-center" style="transition-delay: 150ms;">
+                <div class="text-2xl mb-2 font-bold text-accentLight">Docker</div>
+                <p class="text-textMuted text-xs">One-command deploy</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-24 px-6">
+        <div class="max-w-3xl mx-auto text-center">
+            <div class="section-line mx-auto mb-6"></div>
+            <h2 class="text-3xl md:text-4xl font-bold mb-4 text-white">Ready to Try <span class="text-accentLight">Codera</span>?</h2>
+            <p class="text-textMuted mb-10 max-w-lg mx-auto">Clone the repo, run Docker Compose, and start chatting with your code in minutes. Free and open source.</p>
+            <div class="glass rounded-xl p-5 mb-8 text-left max-w-xl mx-auto border border-borderDark overflow-x-auto">
+                <code class="text-sm text-accentLight whitespace-nowrap">
+                    <span class="text-textMuted">$</span> git clone https://github.com/AriBerisha/codera-community.git<br>
+                    <span class="text-textMuted">$</span> cd codera-community<br>
+                    <span class="text-textMuted">$</span> docker compose up --build
+                </code>
+            </div>
+            <a href="https://github.com/AriBerisha/codera-community" target="_blank" class="inline-flex items-center gap-2 btn-primary text-white px-8 py-4 rounded-xl font-bold text-lg">
+                <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.58 2 12.22c0 4.5 2.87 8.32 6.84 9.66.5.1.66-.22.66-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.57 2.35 1.12 2.92.86.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.05 0-1.11.38-2.01 1.03-2.72-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.04A9.3 9.3 0 0 1 12 6.84c.85 0 1.71.12 2.51.36 1.91-1.32 2.75-1.04 2.75-1.04.55 1.42.2 2.47.1 2.73.64.71 1.03 1.61 1.03 2.72 0 3.92-2.35 4.78-4.59 5.04.36.32.68.95.68 1.92 0 1.39-.01 2.5-.01 2.84 0 .27.18.6.67.49A10.23 10.23 0 0 0 22 12.22C22 6.58 17.52 2 12 2Z"/>
+                </svg>
+                View on GitHub
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-16 px-6 border-t border-borderDark/50 bg-black/30">
+        <div class="max-w-7xl mx-auto text-center">
+            <div class="flex items-center justify-center gap-2.5 mb-6">
+                <svg class="w-7 h-7" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="footerLogoGrad" x1="27" y1="209" x2="1252" y2="512" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#68c2ff"/>
+                            <stop offset="1" stop-color="#007acc"/>
+                        </linearGradient>
+                    </defs>
+                    <path fill="url(#footerLogoGrad)" fill-rule="evenodd" d="m664.2 261.4c-0.1 28.9-0.4 52.6-0.7 52.6-0.3 0-2-0.7-3.8-1.7-1.7-0.9-7-2.9-11.7-4.5-4.7-1.5-12.1-3.5-16.5-4.3-4.4-0.9-12.5-1.6-18-1.6-5.5 0-12.9 0.5-16.5 1-3.6 0.6-9.4 1.9-13 3-3.6 1.1-9.7 3.4-13.5 5.1-3.9 1.8-10.8 5.7-15.5 8.7-4.7 3.1-11.1 8.1-14.3 11.2-3.3 3.1-8.1 8.5-10.8 12.1-2.6 3.6-4.8 6.9-4.9 7.5 0 0.5 8.6 9.5 19.1 20l19.1 19c8-9.3 13-14.7 16.3-18.1 3.7-3.7 8.5-7.3 12.5-9.2 3.6-1.8 9.6-3.8 13.5-4.4 5.4-0.9 8.8-0.9 15 0 4.4 0.7 10.7 2.5 14 4 3.3 1.6 8.7 5.3 12 8.4 3.3 3 7.4 7.7 9.2 10.4 1.8 2.7 4.2 7.6 5.3 10.9 1.5 4.3 2.1 8.5 2.1 15 0 6.2-0.6 11-2 15.5-1.1 3.6-3.7 9.2-5.9 12.5-2.1 3.3-5.6 7.6-7.9 9.5-2.2 1.9-6.7 4.9-9.9 6.7-3.2 1.7-8.6 3.9-11.9 4.7-3.3 0.9-8.6 1.6-11.8 1.6-3.1 0-8.1-0.5-11-1.1-2.8-0.7-7.7-2.3-10.7-3.7-4.7-2.1-14-11-67.1-64.1-47.5-47.6-63.3-62.8-69.5-66.9-4.3-2.9-11.5-7.1-15.9-9.2-4.4-2.1-10.9-4.8-14.5-6-3.6-1.2-11.7-2.9-18-3.8-9.7-1.3-13.1-1.4-22-0.4-5.8 0.7-13.9 2.1-18 3.3-4.1 1.1-11.1 3.7-15.5 5.8-4.4 2-11.4 6-15.5 8.8-4.1 2.9-11.1 8.9-15.6 13.5-4.4 4.6-9.9 11-12.1 14.3-2.2 3.3-5.5 8.9-7.3 12.5-1.8 3.6-4.3 9.2-5.5 12.5-1.3 3.3-3.1 9.6-4 14-0.9 4.7-1.6 12.7-1.6 19.5 0 6.7 0.7 14.8 1.6 19.5 0.9 4.4 2.6 10.7 3.7 14 1.1 3.3 3.7 9.4 5.7 13.5 2 4.1 5.9 10.9 8.6 15 2.8 4.1 7.9 10.4 11.5 14 3.6 3.6 10.8 9.4 16 12.8 5.3 3.5 14 8 19.5 10.2 5.5 2.1 14 4.6 19 5.5 4.9 0.8 13.3 1.5 18.5 1.5 5.2 0 13.3-0.6 18-1.5 4.7-0.8 12.1-2.6 16.5-4.1 4.4-1.4 10.7-4 14-5.7 3.3-1.6 7.8-4.2 10-5.6 2.2-1.4 6.3-4.4 9-6.6 2.8-2.2 8-7.2 11.5-11.2 3.6-3.9 7.2-8.4 8.2-10l1.6-2.8-38.8-37.5c-6.6 7.4-11.1 12.1-14.2 15.2-3.2 3.2-8.2 7-11.1 8.4-2.8 1.5-7.2 3.3-9.7 4-2.5 0.7-7.2 1.6-10.5 1.9-3.8 0.4-8.6 0.1-13-0.8-3.9-0.8-9.9-2.9-13.5-4.7-3.6-1.9-9-5.8-12.1-8.9-3.1-3.1-7-8.4-8.7-11.9-1.8-3.4-3.9-8.8-4.7-12-0.8-3.1-1.5-8.1-1.5-11 0-2.8 0.5-7.6 1.1-10.5 0.6-2.8 2.4-8 4-11.5 1.6-3.4 5.3-8.8 8.2-12 3-3.1 7.8-7.3 10.8-9.2 3-1.9 8-4.2 11.1-5.2 3.6-1.1 9-1.8 14-1.8 4.7 0 10.7 0.7 13.8 1.6 3 0.9 8 3.1 11 4.9 3.7 2.3 25.4 23.3 67.5 65.6 34.1 34.2 64.2 63.6 67 65.4 2.7 1.7 7.5 4.4 10.5 6 3 1.5 9.1 4 13.5 5.6 4.4 1.5 11.6 3.5 16 4.4 4.7 1 12.5 1.7 19 1.7 6 0 14.1-0.6 18-1.2 3.8-0.6 11-2.4 16-4 4.9-1.6 12.8-5 17.5-7.6 4.7-2.6 10.5-6.2 13-8.1 2.5-1.9 7.4-6.2 10.8-9.6 3.5-3.4 9.1-10.3 12.4-15.2 3.3-5 7.2-11.5 8.5-14.5 1.4-3 3.6-8.7 4.9-12.5 1.4-3.9 3.1-11.1 3.9-16 1.2-7.4 1.5-25.6 1.6-102.7l0.1-93.6c-40.8-13.6-53.2-17.7-53.8-18-0.8-0.3-1.1 14.6-1.2 52.2zm-508.2-42.4c-3.6 0.5-10.8 1.9-16 3.1-5.2 1.2-13 3.5-17.3 5-4.2 1.6-10.1 4.1-13 5.5-2.8 1.4-7.9 4.2-11.2 6.2-3.3 2-9.4 6.1-13.5 9.2-4.1 3.1-11.3 9.5-16 14.2-4.7 4.7-11.1 12.1-14.2 16.4-3.1 4.4-8.3 12.8-11.4 18.9-3.2 6-7.2 15.3-9 20.5-1.7 5.2-3.6 12-4.2 15-0.6 3-1.6 8.2-2.2 11.5-0.6 3.3-1 12.3-1 20-0.1 9.4 0.6 17.8 1.9 25.5 1.1 6.3 3.3 15.5 5 20.5 1.6 4.9 4.6 12.6 6.7 17 2 4.4 5.2 10.5 7.1 13.5 2 3 6.1 8.9 9.2 13 3.1 4.1 9.5 11.3 14.2 16 4.8 4.7 12.2 11.1 16.5 14.2 4.4 3.1 12.2 7.9 17.4 10.7 5.2 2.7 12.6 6.1 16.5 7.6 3.8 1.4 11.3 3.7 16.5 5 5.2 1.3 14 2.9 19.5 3.6 6.2 0.7 15 1 23 0.6 7.1-0.4 17.3-1.6 22.5-2.7 5.2-1.1 13.5-3.4 18.5-5.1 4.9-1.7 13.7-5.5 19.5-8.5 5.8-3 14.1-8.1 18.5-11.2 4.3-3.1 12-9.8 17-14.7 5.1-5 11.3-11.9 13.9-15.5 4.5-6.2 4.6-6.6 2.9-8.1-1-0.9-11.6-8.2-23.6-16.3-20.8-14-21.8-14.5-23.5-12.8-1.1 0.9-3.9 4.1-6.3 7.1-2.4 3-8 8.1-12.4 11.4-4.4 3.2-11.6 7.6-16 9.7-4.4 2.1-12.1 4.8-17 6.1-6.8 1.7-11.9 2.2-21 2.2-7.9 0-14.4-0.5-19-1.7-3.9-0.9-9.5-2.6-12.5-3.7-3-1.1-8.2-3.5-11.5-5.4-3.3-1.8-9.2-5.8-13-8.8-3.9-3.1-9.3-8.4-12.2-11.9-2.8-3.5-6.9-9.7-9.2-13.8-2.2-4.1-5.1-10.7-6.5-14.5-1.3-3.9-3-10.2-3.7-14-0.7-4.4-1-11.4-0.6-19 0.4-7.4 1.3-14.7 2.6-19 1.1-3.9 3.2-9.7 4.6-13 1.5-3.3 4.6-8.9 7-12.5 2.4-3.6 6.9-9.2 10.2-12.5 3.2-3.3 8.7-8.1 12.3-10.7 3.6-2.6 9.9-6.2 14-8.2 4.1-1.9 11.5-4.5 16.5-5.7 7-1.7 11.8-2.2 21.5-2.2 9 0.1 14.6 0.7 20 2.1 4.1 1.1 10.9 3.4 15 5.2 4.1 1.7 10.4 5.1 14 7.5 3.6 2.4 8.5 6.3 11 8.7 2.5 2.3 6.6 6.8 9.2 9.8l4.6 5.5c36.6-24.8 47.3-32.2 47.3-32.5 0-0.3-2.1-3.4-4.7-7-2.6-3.6-8.8-10.6-13.9-15.5-5-5-12.7-11.6-17-14.7-4.4-3.1-12.7-8.1-18.5-11.2-5.8-3-14.6-6.8-19.5-8.6-5-1.7-13.3-4-18.5-5.1-6.3-1.3-14.8-2.1-25-2.4-8.5-0.2-18.4 0-22 0.5zm881 80.7c-1.4 0.2-6.1 1.1-10.5 1.9-4.4 0.8-11.4 2.7-15.5 4.1-4.1 1.4-10.1 3.9-13.3 5.4-3.1 1.6-8.1 4.4-11 6.3-2.8 1.8-7.8 5.4-11 8-3.1 2.5-8.6 7.6-12.1 11.3-3.5 3.8-18.2 20.1-32.6 36.3-14.5 16.2-32.2 36-39.4 44-7.2 8-16.9 18.4-21.6 23.1-5.9 6-10.5 9.6-15 11.9-3.6 1.8-9.7 3.9-13.5 4.7-3.9 0.8-9.6 1.3-12.8 1.1-3.1-0.2-5.6-0.6-5.5-0.9 0.2-0.4 22.1-24.4 48.8-53.4 26.7-29 48.8-53.2 49.1-53.9 0.4-0.6-4.7-6.1-11.5-12.4-6.6-6.2-15-13.3-18.6-15.8-3.6-2.5-10.3-6.4-15-8.6-4.7-2.2-12.8-5.2-18-6.6-8.3-2.2-11.6-2.5-25.5-2.5-14.2 0-17.1 0.3-26 2.7-5.5 1.4-14.5 4.8-20 7.6-5.5 2.7-13.1 7.3-17 10.2-3.8 2.9-9.2 7.5-12 10.3-2.7 2.7-7.1 7.9-9.7 11.5-2.5 3.6-6.5 10.1-8.7 14.5-2.3 4.4-5.2 11.4-6.6 15.5-1.3 4.1-3 10.6-3.6 14.5-0.7 4.3-1 12.3-0.6 20.5 0.3 9.1 1.2 16.1 2.6 21.5 1.2 4.4 3.1 10.5 4.3 13.5 1.1 3 4.5 9.7 7.5 14.7 3.8 6.8 8 12 15 19.2 5.4 5.4 12.7 11.8 16.3 14.1 3.6 2.4 9.9 5.9 14 7.8 4.1 1.9 10.2 4.3 13.5 5.2 3.3 1 8.7 2.4 12 3.1 3.3 0.7 11.4 1.3 18 1.3 7.1 0 15.2-0.7 20-1.6 4.4-0.9 10.2-2.4 13-3.3 2.7-0.9 7.7-3 11-4.5 3.3-1.6 9.6-5.2 14-8 5.3-3.4 12.7-9.9 22-19.4 7.7-7.8 29.1-30.6 47.5-50.7 18.4-20.1 37.1-40.5 41.5-45.4 4.4-4.8 10-10.2 12.5-11.8 2.5-1.7 7-4.3 10-5.8 3-1.5 8.2-3.4 11.5-4.3 3.3-0.9 7.7-1.6 9.7-1.6 2.1 0 4.5-0.2 5.3-0.5 1.3-0.4 1.5-4.4 1.5-27.5 0-23.1-0.2-27.1-1.5-27.5-0.8-0.3-3.4-0.4-5.8-0.4-2.3 0.1-5.3 0.4-6.7 0.6zm-213.5 58c2.2-0.2 5.8-0.4 8-0.5 2.2-0.1 5 0 6.2 0.3 2.2 0.5 1.9 0.9-3.4 7.2-3.2 3.8-7.6 8.8-9.9 11.3-2.2 2.5-6.1 6.7-8.6 9.5-2.6 2.7-10.8 11.9-18.4 20.3-7.7 8.3-14.1 14.9-14.4 14.6-0.3-0.3-0.6-2.3-0.7-4.3-0.2-2-0.5-4.7-0.8-6.1-0.2-1.4 0.2-5.7 1.1-9.5 0.8-3.9 1.7-8.4 2.1-10 0.3-1.7 1.4-4.2 2.4-5.8 1.1-1.5 1.9-3.2 1.9-3.7 0-0.6 0.6-1.7 1.2-2.5 0.7-0.9 1.9-2.2 2.5-3 0.7-0.8 1.3-2 1.3-2.5 0-0.6 1.5-2.1 3.2-3.5 1.8-1.3 3.9-2.5 4.5-2.5 0.7 0 1.4-0.3 1.5-0.8 0.2-0.4 3-2 6.3-3.6 3.3-1.5 6.9-3.2 8-3.7 1.1-0.5 3.8-1 6-1.2zm316.5-55.6c-4.7 0.4-11.4 1.5-15 2.4-3.6 0.9-8.8 2.4-11.5 3.4-2.8 1-8.5 3.6-12.9 5.7-4.3 2.2-12.2 7.3-17.5 11.4-7.4 5.8-11.5 10-17.9 18.5-4.5 6.1-8.3 11.6-8.2 12.2 0 0.7-0.5 1.3-1 1.3-0.6 0-0.8 0.4-0.5 1 0.3 0.5 0 1-0.5 1-0.6 0-0.8 0.4-0.5 1 0.3 0.5 0 1-0.5 1-0.6 0-0.9 0.3-0.8 0.7 0.1 0.5-0.3 1.9-0.9 3.3-0.6 1.4-1.3 3.2-1.6 4-0.2 0.8-0.5 1.9-0.7 2.5-0.1 0.5-0.7 1.6-1.3 2.3-0.7 0.7-0.8 1.3-0.2 1.2 0.6-0.1 0.5 0.4-0.1 1.2-0.6 0.7-1.7 3.5-2.3 6.3-0.7 2.7-1.5 9.3-2 14.5-0.4 5.2-0.4 14 0.1 19.5 0.4 5.5 1.9 14 3.3 19 1.4 4.9 4.5 13 6.9 18 2.4 4.9 7.1 12.6 10.3 17 3.3 4.4 8.8 10.7 12.4 13.9 3.5 3.2 8.9 7.6 11.9 9.6 3 2.1 8.3 5.1 11.7 6.9 3.5 1.7 8.7 4 11.5 5 2.9 1.1 8.2 2.8 11.8 3.8 5 1.3 10.4 1.7 24 1.8 15.3 0 18.6-0.3 26.5-2.4 4.9-1.3 11.8-3.6 15.2-5.2l6.3-2.9v9h56l-0.5-208.5c-31.8-0.5-44.3-0.4-48.3-0.1l-7.2 0.6c0 8.5-0.1 11-0.3 11-0.1 0-2.3-1.1-5-2.5-2.6-1.4-4.7-2.2-4.7-1.8 0.1 0.5-0.6 0.1-1.5-0.7-0.9-0.8-1.5-1.1-1.5-0.5 0 0.5-0.6 0.3-1.5-0.5-0.9-0.8-1.6-1.2-1.5-0.8 0 0.5-0.8 0.4-1.8-0.1-0.9-0.5-3.1-1.2-4.7-1.5-1.7-0.3-4.1-0.8-5.5-1.1-1.4-0.3-5.2-0.8-8.5-1.1-3.3-0.2-7.1-0.6-8.5-0.8-1.4-0.1-6.3 0.1-11 0.5zm-2 56.2c3-0.6 7.3-1.2 9.5-1.2 2.2 0 6.9 0.5 10.5 1.3 3.6 0.7 9.2 2.6 12.5 4.2 3.2 1.6 8.6 5.4 12 8.5 3.3 3.2 7.4 8.1 9.2 11 1.8 3 3.9 8.1 4.8 11.4 0.8 3.3 1.5 9.4 1.5 13.5 0 4.1-0.7 10-1.6 13-0.9 3-3 8.2-4.7 11.4-1.8 3.3-5.7 8.4-8.7 11.4-3.3 3.2-8.3 6.7-12.5 8.8-4.4 2.1-9.8 3.8-14.5 4.5-5.5 0.8-9.4 0.8-14.5-0.1-3.9-0.6-10.2-2.6-14-4.5-3.9-1.8-9-5.1-11.5-7.2-2.5-2.2-6.3-6.6-8.4-9.9-2.2-3.2-4.8-8.4-5.8-11.4-1-3-2.1-8-2.4-11-0.4-3-0.1-8.9 0.6-13 0.8-4.5 2.7-10.3 4.8-14.5 2.3-4.5 5.8-9.2 9.6-13 3.4-3.3 8.8-7.3 12.1-9 3.3-1.6 8.5-3.5 11.5-4.2z"/>
+                </svg>
+                <span class="text-lg font-bold tracking-tight text-white">Codera</span>
+            </div>
+            <p class="text-textMuted text-sm mb-8 max-w-md mx-auto">AI-powered code intelligence platform. Connect your repositories, chat with AI that understands your codebase. Open source and self-hosted.</p>
+            <div class="flex justify-center gap-6 text-textMuted">
+                <a href="https://github.com/AriBerisha/codera-community" target="_blank" class="hover:text-accentLight transition-colors"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.58 2 12.22c0 4.5 2.87 8.32 6.84 9.66.5.1.66-.22.66-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.57 2.35 1.12 2.92.86.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.05 0-1.11.38-2.01 1.03-2.72-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.04A9.3 9.3 0 0 1 12 6.84c.85 0 1.71.12 2.51.36 1.91-1.32 2.75-1.04 2.75-1.04.55 1.42.2 2.47.1 2.73.64.71 1.03 1.61 1.03 2.72 0 3.92-2.35 4.78-4.59 5.04.36.32.68.95.68 1.92 0 1.39-.01 2.5-.01 2.84 0 .27.18.6.67.49A10.23 10.23 0 0 0 22 12.22C22 6.58 17.52 2 12 2Z"/>
+                </svg></a>
+            </div>
+            <div class="mt-10 pt-6 border-t border-borderDark/50 text-xs text-textMuted/50 uppercase tracking-widest">
+                &copy; 2026 Codera Project. MIT Licensed.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // --- CANVAS PARTICLE NETWORK ---
+        const canvas = document.getElementById('networkCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const particleCount = 60;
+        const mouse = { x: null, y: null, radius: 180 };
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+        });
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 1.5 + 0.5;
+                this.vx = (Math.random() - 0.5) * 0.35;
+                this.vy = (Math.random() - 0.5) * 0.35;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < mouse.radius) {
+                    this.x -= dx / 30;
+                    this.y -= dy / 30;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = 'rgba(0, 122, 204, 0.35)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+
+                for (let j = i; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 150) {
+                        ctx.strokeStyle = `rgba(0, 122, 204, ${0.12 * (1 - distance/150)})`;
+                        ctx.lineWidth = 0.7;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+
+        initParticles();
+        animateParticles();
+
+        // --- GSAP ANIMATIONS ---
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Hero entrance
+        const tl = gsap.timeline();
+        tl.from(".logo-float", { opacity: 0, scale: 0.8, duration: 1.2, ease: "power4.out" })
+          .from("h1", { opacity: 0, y: 50, duration: 1.4, ease: "power4.out" }, "-=0.8")
+          .from("section:first-of-type p", { opacity: 0, y: 25, duration: 1, ease: "power4.out" }, "-=0.9")
+          .from(".hero-glow", { opacity: 0, duration: 2 }, "-=1.5");
+
+        // Reveal cards on scroll
+        gsap.utils.toArray(".reveal").forEach(card => {
+            gsap.from(card, {
+                scrollTrigger: {
+                    trigger: card,
+                    start: "top 88%",
+                },
+                opacity: 0,
+                y: 35,
+                duration: 0.9,
+                ease: "power3.out"
+            });
+        });
+
+        // AI Section animation
+        gsap.from("#ai .glass", {
+            scrollTrigger: {
+                trigger: "#ai",
+                start: "top 75%",
+            },
+            scale: 0.95,
+            opacity: 0,
+            duration: 1.5,
+            ease: "expo.out"
+        });
+
+        // Section lines
+        gsap.utils.toArray(".section-line").forEach(line => {
+            gsap.from(line, {
+                scrollTrigger: {
+                    trigger: line,
+                    start: "top 90%",
+                },
+                width: 0,
+                duration: 0.8,
+                ease: "power2.out"
+            });
+        });
+    </script>
+</body>
+</html>
