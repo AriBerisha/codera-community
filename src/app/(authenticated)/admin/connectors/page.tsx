@@ -48,7 +48,8 @@ const sections: Section[] = [
         name: "Jira",
         description: "Sync Jira issues and link code changes to tickets.",
         icon: <JiraIcon />,
-        status: "coming-soon",
+        href: "/admin/connectors/jira",
+        status: "active",
       },
       {
         name: "Confluence",
@@ -167,8 +168,10 @@ function BitbucketIcon() {
 
 function JiraIcon() {
   return (
-    <svg className="h-5 w-5 text-[#2684FF]" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M11.571 11.513H0a5.218 5.218 0 005.232 5.215h2.13v2.057A5.215 5.215 0 0012.575 24V12.518a1.005 1.005 0 00-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 005.215 5.214h2.129v2.058a5.218 5.218 0 005.215 5.214V6.758a1.001 1.001 0 00-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 005.215 5.215h2.129v2.057A5.215 5.215 0 0024.013 12.5V1.005A1.005 1.005 0 0023.013 0z" />
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+      <path d="M23.013 0H11.455a5.215 5.215 0 005.215 5.215h2.129v2.057A5.215 5.215 0 0024.013 12.5V1.005A1.005 1.005 0 0023.013 0z" fill="#2684FF" />
+      <path d="M17.294 5.757H5.736a5.215 5.215 0 005.215 5.214h2.129v2.058a5.218 5.218 0 005.215 5.214V6.758a1.001 1.001 0 00-1.001-1.001z" fill="#2684FF" opacity="0.72" />
+      <path d="M11.571 11.513H0a5.218 5.218 0 005.232 5.215h2.13v2.057A5.215 5.215 0 0012.575 24V12.518a1.005 1.005 0 00-1.005-1.005z" fill="#2684FF" opacity="0.45" />
     </svg>
   );
 }

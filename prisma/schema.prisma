@@ -70,6 +70,11 @@ model AppSettings {
   githubPat     String?  // encrypted
   githubOrgName String?
 
+  // Jira
+  jiraUrl      String?  // e.g. https://your-domain.atlassian.net
+  jiraEmail    String?  // user email for basic auth
+  jiraApiToken String?  // encrypted API token
+
   // AI Provider
   aiProvider    String @default("openrouter") // openrouter | openai | google | ollama | openwebui
   aiModel       String @default("anthropic/claude-sonnet-4")
@@ -128,6 +133,56 @@ model GithubProject {
 
   @@index([githubId])
   @@index([indexStatus])
+}
+
+// ============================================================
+// JIRA DATA
+// ============================================================
+
+model JiraProject {
+  id            String      @id @default(cuid())
+  jiraId        String      @unique // Jira project ID (e.g. "10001")
+  key           String      // Jira project key (e.g. "PROJ")
+  name          String
+  description   String?
+  webUrl        String
+  lastIndexedAt DateTime?
+  indexStatus   IndexStatus @default(PENDING)
+  included      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  issues JiraIssue[]
+
+  @@index([jiraId])
+  @@index([indexStatus])
+}
+
+model JiraIssue {
+  id          String   @id @default(cuid())
+  projectId   String
+  jiraId      String   @unique // Jira issue ID (e.g. "10042")
+  key         String   // Jira issue key (e.g. "PROJ-123")
+  summary     String
+  description String?  @db.Text // plain text from ADF
+  issueType   String   // Bug, Task, Story, Epic, etc.
+  status      String   // To Do, In Progress, Done, etc.
+  priority    String?
+  assignee    String?
+  reporter    String?
+  labels      String[] // Jira labels
+  webUrl      String
+  content     String   @db.Text // full searchable text (summary + description + comments)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project JiraProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, key])
+  @@index([projectId])
+  @@index([key])
+  @@index([issueType])
+  @@index([status])
 }
 
 model IndexedFile {

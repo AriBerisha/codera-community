@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getModelInstance } from "@/lib/ai/providers";
 import { buildCodeContext } from "@/lib/ai/code-context";
+import { buildJiraContext } from "@/lib/ai/jira-context";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { parseFileEdits, applyEdit } from "@/lib/ai/parse-file-edits";
 import { getLanguageFromPath } from "@/lib/gitlab/file-filter";
@@ -84,10 +85,13 @@ export async function POST(req: Request) {
     }
   }
 
-  // Build code context from indexed files
-  const codeContext = await buildCodeContext(userContent, projectIds);
+  // Build code context from indexed files + Jira issues
+  const [codeContext, jiraContext] = await Promise.all([
+    buildCodeContext(userContent, projectIds),
+    buildJiraContext(userContent),
+  ]);
   const projectPaths = selectedProjects.map(p => p.pathWithNamespace);
-  const systemPrompt = buildSystemPrompt(codeContext, projectPaths);
+  const systemPrompt = buildSystemPrompt(codeContext + jiraContext, projectPaths);
 
   // Get the configured AI model
   const model = await getModelInstance();

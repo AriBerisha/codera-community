@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getModelInstance } from "@/lib/ai/providers";
 import { buildCodeContext } from "@/lib/ai/code-context";
+import { buildJiraContext } from "@/lib/ai/jira-context";
 import { getPlanningPrompt, getProgrammingPrompt } from "@/lib/ai/workflow-prompts";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { parseFileEdits, applyEdit } from "@/lib/ai/parse-file-edits";
@@ -59,18 +60,22 @@ export async function POST(req: Request) {
       })
     : [];
 
-  // Build code context
-  const codeContext = await buildCodeContext(userContent, projectIds);
+  // Build code context + Jira context
+  const [codeContext, jiraContext] = await Promise.all([
+    buildCodeContext(userContent, projectIds),
+    buildJiraContext(userContent),
+  ]);
+  const fullContext = codeContext + jiraContext;
 
   // Build step-specific system prompt
   const projectPaths = selectedProjects.map(p => p.pathWithNamespace);
   let systemPrompt: string;
   if (currentStep?.type === "PLANNING") {
-    systemPrompt = getPlanningPrompt(codeContext);
+    systemPrompt = getPlanningPrompt(fullContext);
   } else if (currentStep?.type === "PROGRAMMING") {
-    systemPrompt = getProgrammingPrompt(codeContext, execution.planText || "No plan provided.", projectPaths);
+    systemPrompt = getProgrammingPrompt(fullContext, execution.planText || "No plan provided.", projectPaths);
   } else {
-    systemPrompt = buildSystemPrompt(codeContext);
+    systemPrompt = buildSystemPrompt(fullContext);
   }
 
   const model = await getModelInstance();
