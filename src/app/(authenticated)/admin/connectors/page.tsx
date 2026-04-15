@@ -64,7 +64,7 @@ const sections: Section[] = [
     title: "Documentation",
     connectors: [
       {
-        name: "SharePoint",
+        name: "SharePoint (BETA)",
         description: "Index SharePoint documents like Word files and other resources.",
         icon: <SharePointIcon />,
         href: "/admin/connectors/sharepoint",
