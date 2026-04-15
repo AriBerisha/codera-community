@@ -5,6 +5,8 @@ import { buildCodeContext } from "@/lib/ai/code-context";
 import { buildJiraContext } from "@/lib/ai/jira-context";
 import { buildConfluenceContext } from "@/lib/ai/confluence-context";
 import { buildSharePointContext } from "@/lib/ai/sharepoint-context";
+import { ResendClient } from "@/lib/resend/client";
+import { decrypt } from "@/lib/crypto";
 
 /**
  * Parse a cron expression and check if it should have fired
@@ -162,6 +164,29 @@ export async function executeAutomation(automationId: string): Promise<void> {
       where: { id: automationId },
       data: { lastRunAt: new Date() },
     });
+
+    // Send email if Resend is selected and recipients are configured
+    if (
+      sources.includes("resend") &&
+      automation.emailRecipients.length > 0
+    ) {
+      try {
+        const settings = await prisma.appSettings.findUnique({
+          where: { id: "default" },
+        });
+        if (settings?.resendApiKey && settings.resendFromEmail) {
+          const resend = new ResendClient(decrypt(settings.resendApiKey));
+          await resend.sendEmail({
+            from: settings.resendFromEmail,
+            to: automation.emailRecipients,
+            subject: `[Automation] ${automation.title}`,
+            text: text,
+          });
+        }
+      } catch (emailErr) {
+        console.error(`Failed to send automation email for ${automationId}:`, emailErr);
+      }
+    }
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Unknown error occurred";

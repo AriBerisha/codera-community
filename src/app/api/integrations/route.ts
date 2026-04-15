@@ -30,6 +30,9 @@ export async function GET() {
   if (settings?.sharepointTenantId && settings.sharepointClientSecret) {
     integrations.push({ value: "sharepoint", label: "SharePoint" });
   }
+  if (settings?.resendApiKey && settings.resendFromEmail) {
+    integrations.push({ value: "resend", label: "Resend" });
+  }
 
   return NextResponse.json(integrations);
 }

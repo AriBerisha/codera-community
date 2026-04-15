@@ -86,6 +86,10 @@ model AppSettings {
   sharepointClientId     String?  // Azure AD app client ID
   sharepointClientSecret String?  // encrypted client secret
 
+  // Resend (Email)
+  resendApiKey    String?  // encrypted
+  resendFromEmail String?  // e.g. "noreply@yourdomain.com"
+
   // AI Provider
   aiProvider    String @default("openrouter") // openrouter | openai | google | ollama | openwebui
   aiModel       String @default("anthropic/claude-sonnet-4")
@@ -455,8 +459,9 @@ model Automation {
   cronExpression String   @default("0 * * * *") // standard cron (default: every hour)
   scheduleType   String   @default("interval")  // interval | daily | weekly | custom
   scheduleConfig Json?    // UI state: { intervalMinutes?, timeOfDay?, daysOfWeek? }
-  dataSources    String[] @default([])           // e.g. ["jira","confluence","sharepoint","gitlab","github"]
-  enabled        Boolean  @default(true)
+  dataSources     String[] @default([])           // e.g. ["jira","confluence","sharepoint","gitlab","github"]
+  emailRecipients String[] @default([])          // email addresses to send results to (requires resend)
+  enabled         Boolean  @default(true)
   lastRunAt      DateTime?
   userId         String
   createdAt      DateTime @default(now())

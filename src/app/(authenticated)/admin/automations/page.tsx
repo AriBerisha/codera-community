@@ -38,6 +38,7 @@ interface Automation {
   scheduleType: string;
   scheduleConfig: ScheduleConfig | null;
   dataSources: string[];
+  emailRecipients: string[];
   enabled: boolean;
   lastRunAt: string | null;
   createdAt: string;
@@ -141,6 +142,7 @@ export default function AutomationsPage() {
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
   const [customCron, setCustomCron] = useState("0 * * * *");
   const [dataSources, setDataSources] = useState<string[]>([]);
+  const [emailRecipients, setEmailRecipients] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Detail / run history
@@ -188,6 +190,7 @@ export default function AutomationsPage() {
     setDaysOfWeek([1, 2, 3, 4, 5]);
     setCustomCron("0 * * * *");
     setDataSources([]);
+    setEmailRecipients("");
     setEditingId(null);
     setShowForm(false);
   }
@@ -203,6 +206,7 @@ export default function AutomationsPage() {
     setDaysOfWeek(cfg.daysOfWeek ?? [1, 2, 3, 4, 5]);
     setCustomCron(auto.cronExpression);
     setDataSources(auto.dataSources ?? []);
+    setEmailRecipients((auto.emailRecipients ?? []).join(", "));
     setShowForm(true);
     setSelectedId(null);
   }
@@ -245,6 +249,11 @@ export default function AutomationsPage() {
     }
 
     try {
+      const parsedRecipients = emailRecipients
+        .split(/[,;\s]+/)
+        .map((e) => e.trim())
+        .filter(Boolean);
+
       const body = {
         title,
         instructions,
@@ -252,6 +261,7 @@ export default function AutomationsPage() {
         scheduleType,
         scheduleConfig,
         dataSources,
+        emailRecipients: parsedRecipients,
       };
       const res = editingId
         ? await fetch(`/api/automations/${editingId}`, {
@@ -618,6 +628,22 @@ export default function AutomationsPage() {
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Email recipients — shown when Resend is selected */}
+              {dataSources.includes("resend") && (
+                <div className="space-y-2">
+                  <Label htmlFor="auto-recipients">Email Recipients</Label>
+                  <Input
+                    id="auto-recipients"
+                    value={emailRecipients}
+                    onChange={(e) => setEmailRecipients(e.target.value)}
+                    placeholder="alice@example.com, bob@example.com"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Comma-separated email addresses. The AI response will be emailed to these recipients after each run.
+                  </p>
                 </div>
               )}
 
