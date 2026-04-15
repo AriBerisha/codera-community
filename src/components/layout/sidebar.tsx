@@ -18,6 +18,7 @@ const navItems = [
   { href: "/admin/users", label: "Users", icon: UsersIcon, roles: ["ADMIN"] },
   { href: "/admin/connectors", label: "Connectors", icon: ConnectorsIcon, roles: ["ADMIN"] },
   { href: "/admin/workflows", label: "Workflows", icon: WorkflowIcon, roles: ["ADMIN"] },
+  { href: "/admin/automations", label: "Automations", icon: AutomationsIcon, roles: ["ADMIN"] },
   { href: "/admin/settings", label: "Settings", icon: SettingsIcon, roles: ["ADMIN"] },
 ];
 
@@ -161,6 +162,14 @@ function WorkflowIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+    </svg>
+  );
+}
+
+function AutomationsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   );
 }

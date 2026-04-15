@@ -25,6 +25,7 @@ model User {
   conversations      Conversation[]
   messages           Message[]
   workflowExecutions WorkflowExecution[]
+  automations        Automation[]
 
   @@index([email])
   @@index([role])
@@ -441,4 +442,50 @@ enum FileChangeStatus {
   ACCEPTED
   REJECTED
   COMMITTED
+}
+
+// ============================================================
+// AUTOMATIONS (scheduled AI cron jobs)
+// ============================================================
+
+model Automation {
+  id             String   @id @default(cuid())
+  title          String
+  instructions   String   @db.Text
+  cronExpression String   @default("0 * * * *") // standard cron (default: every hour)
+  scheduleType   String   @default("interval")  // interval | daily | weekly | custom
+  scheduleConfig Json?    // UI state: { intervalMinutes?, timeOfDay?, daysOfWeek? }
+  dataSources    String[] @default([])           // e.g. ["jira","confluence","sharepoint","gitlab","github"]
+  enabled        Boolean  @default(true)
+  lastRunAt      DateTime?
+  userId         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs AutomationRun[]
+
+  @@index([userId])
+  @@index([enabled])
+}
+
+model AutomationRun {
+  id           String              @id @default(cuid())
+  automationId String
+  status       AutomationRunStatus @default(RUNNING)
+  response     String?             @db.Text
+  error        String?             @db.Text
+  startedAt    DateTime            @default(now())
+  completedAt  DateTime?
+
+  automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@index([automationId])
+  @@index([startedAt])
+}
+
+enum AutomationRunStatus {
+  RUNNING
+  SUCCESS
+  FAILED
 }

@@ -23,13 +23,8 @@ export async function GET(req: Request) {
       !settings?.sharepointClientId ||
       !settings?.sharepointClientSecret
     ) {
-      return NextResponse.json(
-        { error: "SharePoint is not configured" },
-        { status: 400 }
-      );
-    }
-
-    try {
+      // Not configured yet — skip sync, just return local data
+    } else try {
       const client = new SharePointClient(
         settings.sharepointTenantId,
         settings.sharepointClientId,
