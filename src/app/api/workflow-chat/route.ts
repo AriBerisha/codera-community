@@ -6,6 +6,7 @@ import { buildCodeContext } from "@/lib/ai/code-context";
 import { buildJiraContext } from "@/lib/ai/jira-context";
 import { buildConfluenceContext } from "@/lib/ai/confluence-context";
 import { buildSharePointContext } from "@/lib/ai/sharepoint-context";
+import { buildMcpContext } from "@/lib/ai/mcp-context";
 import { getPlanningPrompt, getProgrammingPrompt } from "@/lib/ai/workflow-prompts";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { parseFileEdits, applyEdit } from "@/lib/ai/parse-file-edits";
@@ -63,13 +64,14 @@ export async function POST(req: Request) {
     : [];
 
   // Build code context + Jira + Confluence + SharePoint context
-  const [codeContext, jiraContext, confluenceContext, sharepointContext] = await Promise.all([
+  const [codeContext, jiraContext, confluenceContext, sharepointContext, mcpContext] = await Promise.all([
     buildCodeContext(userContent, projectIds),
     buildJiraContext(userContent),
     buildConfluenceContext(userContent),
     buildSharePointContext(userContent),
+    buildMcpContext(userContent),
   ]);
-  const fullContext = codeContext + jiraContext + confluenceContext + sharepointContext;
+  const fullContext = codeContext + jiraContext + confluenceContext + sharepointContext + mcpContext;
 
   // Build step-specific system prompt
   const projectPaths = selectedProjects.map(p => p.pathWithNamespace);

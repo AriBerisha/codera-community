@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { encrypt } from "@/lib/crypto";
-import { ResendClient } from "@/lib/resend/client";
-
 export async function POST(req: Request) {
   const session = await auth();
   if (session?.user?.role !== "ADMIN") {
@@ -19,28 +17,19 @@ export async function POST(req: Request) {
     );
   }
 
-  try {
-    const client = new ResendClient(apiKey);
-    await client.validateConnection();
+  await prisma.appSettings.upsert({
+    where: { id: "default" },
+    update: {
+      resendApiKey: encrypt(apiKey),
+      resendFromEmail: fromEmail,
+    },
+    create: {
+      id: "default",
+      setupCompleted: true,
+      resendApiKey: encrypt(apiKey),
+      resendFromEmail: fromEmail,
+    },
+  });
 
-    await prisma.appSettings.upsert({
-      where: { id: "default" },
-      update: {
-        resendApiKey: encrypt(apiKey),
-        resendFromEmail: fromEmail,
-      },
-      create: {
-        id: "default",
-        setupCompleted: true,
-        resendApiKey: encrypt(apiKey),
-        resendFromEmail: fromEmail,
-      },
-    });
-
-    return NextResponse.json({ success: true, fromEmail });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Connection failed";
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
+  return NextResponse.json({ success: true, fromEmail });
 }

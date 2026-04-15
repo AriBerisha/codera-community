@@ -5,6 +5,7 @@ import { buildCodeContext } from "@/lib/ai/code-context";
 import { buildJiraContext } from "@/lib/ai/jira-context";
 import { buildConfluenceContext } from "@/lib/ai/confluence-context";
 import { buildSharePointContext } from "@/lib/ai/sharepoint-context";
+import { buildMcpContext } from "@/lib/ai/mcp-context";
 import { ResendClient } from "@/lib/resend/client";
 import { decrypt } from "@/lib/crypto";
 
@@ -128,6 +129,9 @@ export async function executeAutomation(automationId: string): Promise<void> {
     }
     if (sources.includes("sharepoint")) {
       contextParts.push(buildSharePointContext(automation.instructions));
+    }
+    if (sources.includes("mcp")) {
+      contextParts.push(buildMcpContext(automation.instructions));
     }
 
     const contextResults = await Promise.all(contextParts);

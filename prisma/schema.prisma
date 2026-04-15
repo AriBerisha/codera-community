@@ -449,6 +449,23 @@ enum FileChangeStatus {
 }
 
 // ============================================================
+// CUSTOM MCP SERVERS
+// ============================================================
+
+model McpServer {
+  id        String  @id @default(cuid())
+  name      String
+  url       String  // MCP server endpoint (SSE / Streamable HTTP)
+  apiKey    String? // encrypted Bearer token
+  headers   Json?   // additional custom headers (values encrypted)
+  enabled   Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled])
+}
+
+// ============================================================
 // AUTOMATIONS (scheduled AI cron jobs)
 // ============================================================
 

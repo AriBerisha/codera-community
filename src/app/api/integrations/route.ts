@@ -34,5 +34,11 @@ export async function GET() {
     integrations.push({ value: "resend", label: "Resend" });
   }
 
+  // Check for enabled MCP servers
+  const mcpCount = await prisma.mcpServer.count({ where: { enabled: true } });
+  if (mcpCount > 0) {
+    integrations.push({ value: "mcp", label: "MCP" });
+  }
+
   return NextResponse.json(integrations);
 }

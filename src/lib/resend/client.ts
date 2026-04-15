@@ -40,9 +40,9 @@ export class ResendClient {
     return res.json();
   }
 
-  /** Validate the API key by fetching API keys list. */
+  /** Validate the API key by fetching domains (allowed for send-only keys). */
   async validateConnection(): Promise<void> {
-    await this.request("/api-keys");
+    await this.request("/domains");
   }
 
   /** Send an email. */
