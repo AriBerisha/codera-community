@@ -75,6 +75,11 @@ model AppSettings {
   jiraEmail    String?  // user email for basic auth
   jiraApiToken String?  // encrypted API token
 
+  // Confluence
+  confluenceUrl      String?  // e.g. https://your-domain.atlassian.net
+  confluenceEmail    String?  // user email for basic auth
+  confluenceApiToken String?  // encrypted API token
+
   // AI Provider
   aiProvider    String @default("openrouter") // openrouter | openai | google | ollama | openwebui
   aiModel       String @default("anthropic/claude-sonnet-4")
@@ -183,6 +188,46 @@ model JiraIssue {
   @@index([key])
   @@index([issueType])
   @@index([status])
+}
+
+// ============================================================
+// CONFLUENCE DATA
+// ============================================================
+
+model ConfluenceSpace {
+  id            String      @id @default(cuid())
+  confluenceId  String      @unique // Confluence space ID
+  key           String      // Space key (e.g. "ENG")
+  name          String
+  description   String?
+  webUrl        String
+  lastIndexedAt DateTime?
+  indexStatus   IndexStatus @default(PENDING)
+  included      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  pages ConfluencePage[]
+
+  @@index([confluenceId])
+  @@index([indexStatus])
+}
+
+model ConfluencePage {
+  id           String   @id @default(cuid())
+  spaceId      String
+  confluenceId String   @unique // Confluence page ID
+  title        String
+  webUrl       String
+  content      String   @db.Text // plain text for search
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  space ConfluenceSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@unique([spaceId, confluenceId])
+  @@index([spaceId])
+  @@index([title])
 }
 
 model IndexedFile {

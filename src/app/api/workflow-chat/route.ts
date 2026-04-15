@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getModelInstance } from "@/lib/ai/providers";
 import { buildCodeContext } from "@/lib/ai/code-context";
 import { buildJiraContext } from "@/lib/ai/jira-context";
+import { buildConfluenceContext } from "@/lib/ai/confluence-context";
 import { getPlanningPrompt, getProgrammingPrompt } from "@/lib/ai/workflow-prompts";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { parseFileEdits, applyEdit } from "@/lib/ai/parse-file-edits";
@@ -61,11 +62,12 @@ export async function POST(req: Request) {
     : [];
 
   // Build code context + Jira context
-  const [codeContext, jiraContext] = await Promise.all([
+  const [codeContext, jiraContext, confluenceContext] = await Promise.all([
     buildCodeContext(userContent, projectIds),
     buildJiraContext(userContent),
+    buildConfluenceContext(userContent),
   ]);
-  const fullContext = codeContext + jiraContext;
+  const fullContext = codeContext + jiraContext + confluenceContext;
 
   // Build step-specific system prompt
   const projectPaths = selectedProjects.map(p => p.pathWithNamespace);
