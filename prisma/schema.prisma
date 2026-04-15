@@ -80,6 +80,11 @@ model AppSettings {
   confluenceEmail    String?  // user email for basic auth
   confluenceApiToken String?  // encrypted API token
 
+  // SharePoint (Microsoft Graph)
+  sharepointTenantId     String?  // Azure AD tenant ID
+  sharepointClientId     String?  // Azure AD app client ID
+  sharepointClientSecret String?  // encrypted client secret
+
   // AI Provider
   aiProvider    String @default("openrouter") // openrouter | openai | google | ollama | openwebui
   aiModel       String @default("anthropic/claude-sonnet-4")
@@ -228,6 +233,48 @@ model ConfluencePage {
   @@unique([spaceId, confluenceId])
   @@index([spaceId])
   @@index([title])
+}
+
+// ============================================================
+// SHAREPOINT DATA
+// ============================================================
+
+model SharePointSite {
+  id            String      @id @default(cuid())
+  siteId        String      @unique // Microsoft Graph site ID
+  name          String
+  displayName   String
+  webUrl        String
+  lastIndexedAt DateTime?
+  indexStatus   IndexStatus @default(PENDING)
+  included      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  files SharePointFile[]
+
+  @@index([siteId])
+  @@index([indexStatus])
+}
+
+model SharePointFile {
+  id         String   @id @default(cuid())
+  siteId     String
+  driveItemId String  @unique // Microsoft Graph drive item ID
+  name       String
+  path       String   // folder path within the drive
+  mimeType   String?
+  webUrl     String
+  sizeBytes  Int
+  content    String   @db.Text // extracted plain text
+  sha        String?  // eTag for change detection
+  indexedAt   DateTime @default(now())
+
+  site SharePointSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, driveItemId])
+  @@index([siteId])
+  @@index([name])
 }
 
 model IndexedFile {

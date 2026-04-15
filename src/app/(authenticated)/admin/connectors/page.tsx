@@ -61,6 +61,18 @@ const sections: Section[] = [
     ],
   },
   {
+    title: "Documentation",
+    connectors: [
+      {
+        name: "SharePoint",
+        description: "Index SharePoint documents like Word files and other resources.",
+        icon: <SharePointIcon />,
+        href: "/admin/connectors/sharepoint",
+        status: "active",
+      },
+    ],
+  },
+  {
     title: "Communications",
     connectors: [
       {
@@ -182,6 +194,16 @@ function ConfluenceIcon() {
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
       <path d="M1.26 17.4c-.237.36-.504.78-.504.78a.54.54 0 00.192.744l4.2 2.556a.54.54 0 00.744-.168s.384-.636.828-1.344c1.776-2.832 3.576-2.472 6.852-.96l4.14 1.92a.546.546 0 00.72-.276l1.932-4.44a.54.54 0 00-.276-.708s-1.884-.876-3.828-1.776C10.14 10.836 4.68 12 1.26 17.4z" fill="#2684FF" />
       <path d="M22.74 6.6c.237-.36.504-.78.504-.78a.54.54 0 00-.192-.744l-4.2-2.556a.54.54 0 00-.744.168s-.384.636-.828 1.344c-1.776 2.832-3.576 2.472-6.852.96L6.288 3.07a.546.546 0 00-.72.276L3.636 7.787a.54.54 0 00.276.708s1.884.876 3.828 1.776C13.86 13.163 19.32 12 22.74 6.6z" fill="#2684FF" opacity="0.65" />
+    </svg>
+  );
+}
+
+function SharePointIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="10" r="7" fill="#036C70" />
+      <circle cx="16" cy="14" r="5.5" fill="#1A9BA1" />
+      <circle cx="10" cy="16" r="4" fill="#37C6D0" />
     </svg>
   );
 }
