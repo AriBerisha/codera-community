@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isAdminRole } from "@/lib/auth-utils";
 import {
   connectMcpServer,
   listMcpTools,
@@ -10,7 +11,7 @@ import {
 /** POST — test connection to an MCP server and return its capabilities. */
 export async function POST(req: Request) {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  if (!isAdminRole(session?.user?.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

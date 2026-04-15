@@ -8,6 +8,7 @@ import { buildConfluenceContext } from "@/lib/ai/confluence-context";
 import { buildSharePointContext } from "@/lib/ai/sharepoint-context";
 import { buildMcpContext } from "@/lib/ai/mcp-context";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
+import { getUserAllowedIntegrations, isIntegrationAllowed } from "@/lib/teams/integrations";
 import { parseFileEdits, applyEdit } from "@/lib/ai/parse-file-edits";
 import { getLanguageFromPath } from "@/lib/gitlab/file-filter";
 
@@ -88,16 +89,24 @@ export async function POST(req: Request) {
     }
   }
 
-  // Build code context from indexed files + Jira issues
-  const [codeContext, jiraContext, confluenceContext, sharepointContext, mcpContext] = await Promise.all([
-    buildCodeContext(userContent, projectIds),
-    buildJiraContext(userContent),
-    buildConfluenceContext(userContent),
-    buildSharePointContext(userContent),
-    buildMcpContext(userContent),
-  ]);
+  // Determine which integrations this user may access
+  const allowed = await getUserAllowedIntegrations(session.user.id, session.user.role);
+  const can = (i: string) => isIntegrationAllowed(allowed, i);
+
+  // Build code context from indexed files + other integrations (gated by team)
+  const contextParts: Promise<string>[] = [];
+  if (can("gitlab") || can("github")) {
+    contextParts.push(buildCodeContext(userContent, projectIds));
+  }
+  if (can("jira"))       contextParts.push(buildJiraContext(userContent));
+  if (can("confluence")) contextParts.push(buildConfluenceContext(userContent));
+  if (can("sharepoint")) contextParts.push(buildSharePointContext(userContent));
+  if (can("mcp"))        contextParts.push(buildMcpContext(userContent));
+
+  const contextResults = await Promise.all(contextParts);
+  const fullContext = contextResults.join("");
   const projectPaths = selectedProjects.map(p => p.pathWithNamespace);
-  const systemPrompt = buildSystemPrompt(codeContext + jiraContext + confluenceContext + sharepointContext + mcpContext, projectPaths);
+  const systemPrompt = buildSystemPrompt(fullContext, projectPaths);
 
   // Get the configured AI model
   const model = await getModelInstance();

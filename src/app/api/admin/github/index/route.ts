@@ -5,10 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/crypto";
 import { GithubClient } from "@/lib/github/client";
 import { indexGithubProject } from "@/lib/github/indexer";
+import { isAdminRole } from "@/lib/auth-utils";
 
 export async function POST(req: Request) {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  if (!isAdminRole(session?.user?.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

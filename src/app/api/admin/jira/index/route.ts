@@ -5,10 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/crypto";
 import { JiraClient } from "@/lib/jira/client";
 import { indexJiraProject } from "@/lib/jira/indexer";
+import { isAdminRole } from "@/lib/auth-utils";
 
 export async function POST(req: Request) {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  if (!isAdminRole(session?.user?.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

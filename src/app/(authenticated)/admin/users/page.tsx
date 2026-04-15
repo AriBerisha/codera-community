@@ -215,7 +215,7 @@ export default function UsersPage() {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={user.role === "ADMIN" ? "default" : "secondary"}
+                      variant={user.role === "OWNER" ? "destructive" : user.role === "ADMIN" ? "default" : "secondary"}
                     >
                       {user.role}
                     </Badge>
@@ -224,25 +224,29 @@ export default function UsersPage() {
                     {new Date(user.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        handleRoleChange(
-                          user.id,
-                          user.role === "ADMIN" ? "MEMBER" : "ADMIN"
-                        )
-                      }
-                    >
-                      {user.role === "ADMIN" ? "Demote" : "Promote"}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(user.id, user.name)}
-                    >
-                      Delete
-                    </Button>
+                    {user.role !== "OWNER" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleRoleChange(
+                              user.id,
+                              user.role === "ADMIN" ? "MEMBER" : "ADMIN"
+                            )
+                          }
+                        >
+                          {user.role === "ADMIN" ? "Demote" : "Promote"}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(user.id, user.name)}
+                        >
+                          Delete
+                        </Button>
+                      </>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

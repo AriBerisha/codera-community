@@ -51,9 +51,10 @@ export const authConfig: NextAuthConfig = {
         return false; // Redirects to signIn page
       }
 
-      // Admin-only routes
+      // Admin-only routes (OWNER + ADMIN)
       if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
-        if (auth?.user?.role !== "ADMIN") {
+        const role = auth?.user?.role;
+        if (role !== "ADMIN" && role !== "OWNER") {
           return Response.redirect(new URL("/chat", nextUrl));
         }
       }

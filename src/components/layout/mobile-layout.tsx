@@ -26,10 +26,12 @@ export function useMobileLayout() {
 export function MobileLayout({
   userRole,
   userName,
+  userEmail,
   children,
 }: {
   userRole: string;
   userName: string | null | undefined;
+  userEmail: string;
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -49,7 +51,7 @@ export function MobileLayout({
       <div className="flex h-screen overflow-hidden bg-[#0d1117]">
         {/* Desktop sidebar — hidden on mobile */}
         <div className="hidden md:block">
-          <Sidebar userRole={userRole} userName={userName} />
+          <Sidebar userRole={userRole} userName={userName} userEmail={userEmail} />
         </div>
 
         {/* Mobile sidebar overlay */}
@@ -57,7 +59,7 @@ export function MobileLayout({
           <div className="fixed inset-0 z-50 md:hidden">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeSidebar} />
             <div className="absolute left-0 top-0 h-full w-[220px] shadow-2xl shadow-black/50">
-              <Sidebar userRole={userRole} userName={userName} forceExpanded />
+              <Sidebar userRole={userRole} userName={userName} userEmail={userEmail} forceExpanded />
             </div>
           </div>
         )}

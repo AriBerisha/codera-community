@@ -24,7 +24,7 @@ export default async function AuthenticatedLayout({
 
   return (
     <>
-      <MobileLayout userRole={session.user.role} userName={session.user.name}>
+      <MobileLayout userRole={session.user.role} userName={session.user.name} userEmail={session.user.email}>
         {children}
       </MobileLayout>
       <Toaster

@@ -41,7 +41,7 @@ export async function POST(req: Request) {
           name,
           email,
           hashedPassword,
-          role: "ADMIN",
+          role: "OWNER",
         },
       }),
       prisma.appSettings.upsert({

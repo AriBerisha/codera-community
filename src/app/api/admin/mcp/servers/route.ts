@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { encrypt } from "@/lib/crypto";
+import { isAdminRole } from "@/lib/auth-utils";
 
 /** GET — list all MCP servers. */
 export async function GET() {
@@ -26,7 +27,7 @@ export async function GET() {
 /** POST — add a new MCP server. */
 export async function POST(req: Request) {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  if (!isAdminRole(session?.user?.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

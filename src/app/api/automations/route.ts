@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isAdminRole } from "@/lib/auth-utils";
 
 /** GET — list all automations for the current user (admins see all). */
 export async function GET() {
@@ -10,7 +11,7 @@ export async function GET() {
   }
 
   const where =
-    session.user.role === "ADMIN" ? {} : { userId: session.user.id };
+    isAdminRole(session.user.role) ? {} : { userId: session.user.id };
 
   const automations = await prisma.automation.findMany({
     where,
@@ -27,7 +28,7 @@ export async function GET() {
 /** POST — create a new automation. */
 export async function POST(req: Request) {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  if (!isAdminRole(session?.user?.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
       dataSources: dataSources ?? [],
       emailRecipients: emailRecipients ?? [],
       enabled: enabled ?? true,
-      userId: session.user.id,
+      userId: session!.user!.id,
     },
   });
 

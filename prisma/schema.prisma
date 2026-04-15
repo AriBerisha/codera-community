@@ -26,12 +26,52 @@ model User {
   messages           Message[]
   workflowExecutions WorkflowExecution[]
   automations        Automation[]
+  teamMemberships    TeamMember[]
 
   @@index([email])
   @@index([role])
 }
 
 enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ============================================================
+// TEAMS
+// ============================================================
+
+model Team {
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  enabledIntegrations  String[] @default([]) // e.g. ["gitlab","jira","confluence"]
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  members TeamMember[]
+
+  @@index([slug])
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     TeamRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+enum TeamRole {
+  OWNER
   ADMIN
   MEMBER
 }
