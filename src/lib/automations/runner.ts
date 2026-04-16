@@ -5,8 +5,10 @@ import { buildCodeContext } from "@/lib/ai/code-context";
 import { buildJiraContext } from "@/lib/ai/jira-context";
 import { buildConfluenceContext } from "@/lib/ai/confluence-context";
 import { buildSharePointContext } from "@/lib/ai/sharepoint-context";
+import { buildTelegramContext } from "@/lib/ai/telegram-context";
 import { buildMcpContext } from "@/lib/ai/mcp-context";
 import { ResendClient } from "@/lib/resend/client";
+import { TelegramClient } from "@/lib/telegram/client";
 import { decrypt } from "@/lib/crypto";
 
 /**
@@ -130,6 +132,9 @@ export async function executeAutomation(automationId: string): Promise<void> {
     if (sources.includes("sharepoint")) {
       contextParts.push(buildSharePointContext(automation.instructions));
     }
+    if (sources.includes("telegram")) {
+      contextParts.push(buildTelegramContext(automation.instructions));
+    }
     if (sources.includes("mcp")) {
       contextParts.push(buildMcpContext(automation.instructions));
     }
@@ -169,15 +174,17 @@ export async function executeAutomation(automationId: string): Promise<void> {
       data: { lastRunAt: new Date() },
     });
 
+    // Send outputs to configured channels
+    const settings = await prisma.appSettings.findUnique({
+      where: { id: "default" },
+    });
+
     // Send email if Resend is selected and recipients are configured
     if (
       sources.includes("resend") &&
       automation.emailRecipients.length > 0
     ) {
       try {
-        const settings = await prisma.appSettings.findUnique({
-          where: { id: "default" },
-        });
         if (settings?.resendApiKey && settings.resendFromEmail) {
           const resend = new ResendClient(decrypt(settings.resendApiKey));
           await resend.sendEmail({
@@ -189,6 +196,33 @@ export async function executeAutomation(automationId: string): Promise<void> {
         }
       } catch (emailErr) {
         console.error(`Failed to send automation email for ${automationId}:`, emailErr);
+      }
+    }
+
+    // Send to Telegram chats if configured
+    if (automation.telegramChatIds.length > 0 && settings?.telegramBotToken) {
+      try {
+        const tgClient = new TelegramClient(decrypt(settings.telegramBotToken));
+        for (const chatId of automation.telegramChatIds) {
+          try {
+            await tgClient.sendMessage(chatId, text);
+            // Store in DB
+            await prisma.telegramMessage.create({
+              data: {
+                chatId: BigInt(chatId),
+                chatType: "unknown",
+                fromName: "Bot",
+                text: `[${automation.title}]\n\n${text}`,
+                isBot: true,
+                sentAt: new Date(),
+              },
+            });
+          } catch (chatErr) {
+            console.error(`Failed to send to Telegram chat ${chatId}:`, chatErr);
+          }
+        }
+      } catch (tgErr) {
+        console.error(`Failed to send automation Telegram for ${automationId}:`, tgErr);
       }
     }
   } catch (err) {

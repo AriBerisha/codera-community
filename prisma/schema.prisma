@@ -126,6 +126,12 @@ model AppSettings {
   sharepointClientId     String?  // Azure AD app client ID
   sharepointClientSecret String?  // encrypted client secret
 
+  // Telegram
+  telegramBotToken      String?  // encrypted bot token from @BotFather
+  telegramAutoReply     Boolean  @default(false)
+  telegramBotPrompt     String?  @db.Text  // system prompt for auto-replies
+  telegramWebhookSecret String?  // secret token for webhook verification
+
   // Resend (Email)
   resendApiKey    String?  // encrypted
   resendFromEmail String?  // e.g. "noreply@yourdomain.com"
@@ -506,6 +512,27 @@ model McpServer {
 }
 
 // ============================================================
+// TELEGRAM MESSAGES (persisted bot messages)
+// ============================================================
+
+model TelegramMessage {
+  id          String   @id @default(cuid())
+  updateId    Int?     @unique // Telegram update_id — null for bot-sent messages
+  chatId      BigInt   // Telegram chat ID
+  chatTitle   String?  // Group name or DM name
+  chatType    String   // private, group, supergroup, channel
+  fromName    String   // Sender display name
+  fromUsername String? // Sender @username
+  text        String   // Message text
+  isBot       Boolean  @default(false) // true if sent by the bot
+  sentAt      DateTime // When the message was sent (from Telegram)
+  createdAt   DateTime @default(now())
+
+  @@index([chatId])
+  @@index([sentAt])
+}
+
+// ============================================================
 // AUTOMATIONS (scheduled AI cron jobs)
 // ============================================================
 
@@ -518,6 +545,7 @@ model Automation {
   scheduleConfig Json?    // UI state: { intervalMinutes?, timeOfDay?, daysOfWeek? }
   dataSources     String[] @default([])           // e.g. ["jira","confluence","sharepoint","gitlab","github"]
   emailRecipients String[] @default([])          // email addresses to send results to (requires resend)
+  telegramChatIds String[] @default([])          // Telegram chat IDs to send results to
   enabled         Boolean  @default(true)
   lastRunAt      DateTime?
   userId         String

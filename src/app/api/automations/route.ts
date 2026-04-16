@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { title, instructions, cronExpression, scheduleType, scheduleConfig, dataSources, emailRecipients, enabled } =
+  const { title, instructions, cronExpression, scheduleType, scheduleConfig, dataSources, emailRecipients, telegramChatIds, enabled } =
     await req.json();
 
   if (!title || !instructions) {
@@ -51,6 +51,7 @@ export async function POST(req: Request) {
       scheduleConfig: scheduleConfig ?? null,
       dataSources: dataSources ?? [],
       emailRecipients: emailRecipients ?? [],
+      telegramChatIds: telegramChatIds ?? [],
       enabled: enabled ?? true,
       userId: session!.user!.id,
     },

@@ -61,6 +61,8 @@ export async function PATCH(
   if (body.dataSources !== undefined) data.dataSources = body.dataSources;
   if (body.emailRecipients !== undefined)
     data.emailRecipients = body.emailRecipients;
+  if (body.telegramChatIds !== undefined)
+    data.telegramChatIds = body.telegramChatIds;
   if (body.enabled !== undefined) data.enabled = body.enabled;
 
   const automation = await prisma.automation.update({

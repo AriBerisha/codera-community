@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Fragment } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,14 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+// Table import removed — automations use card layout now
 import { toast } from "sonner";
 
 // ─── Types ───────────────────────────────────────────────
@@ -28,6 +21,12 @@ interface ScheduleConfig {
   intervalMinutes?: number;
   timeOfDay?: string; // "HH:MM"
   daysOfWeek?: number[]; // 0=Sun..6=Sat
+}
+
+interface TelegramChatOption {
+  id: string;
+  title: string;
+  type: string;
 }
 
 interface Automation {
@@ -39,6 +38,7 @@ interface Automation {
   scheduleConfig: ScheduleConfig | null;
   dataSources: string[];
   emailRecipients: string[];
+  telegramChatIds: string[];
   enabled: boolean;
   lastRunAt: string | null;
   createdAt: string;
@@ -130,6 +130,7 @@ export default function AutomationsPage() {
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [loading, setLoading] = useState(true);
   const [availableIntegrations, setAvailableIntegrations] = useState<IntegrationOption[]>([]);
+  const [telegramChats, setTelegramChats] = useState<TelegramChatOption[]>([]);
 
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -143,6 +144,7 @@ export default function AutomationsPage() {
   const [customCron, setCustomCron] = useState("0 * * * *");
   const [dataSources, setDataSources] = useState<string[]>([]);
   const [emailRecipients, setEmailRecipients] = useState("");
+  const [telegramChatIds, setTelegramChatIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Detail / run history
@@ -166,6 +168,10 @@ export default function AutomationsPage() {
     fetch("/api/integrations")
       .then((r) => (r.ok ? r.json() : []))
       .then(setAvailableIntegrations)
+      .catch(() => {});
+    fetch("/api/admin/agents/telegram/chats")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setTelegramChats)
       .catch(() => {});
   }, [fetchAutomations]);
 
@@ -191,6 +197,7 @@ export default function AutomationsPage() {
     setCustomCron("0 * * * *");
     setDataSources([]);
     setEmailRecipients("");
+    setTelegramChatIds([]);
     setEditingId(null);
     setShowForm(false);
   }
@@ -207,6 +214,7 @@ export default function AutomationsPage() {
     setCustomCron(auto.cronExpression);
     setDataSources(auto.dataSources ?? []);
     setEmailRecipients((auto.emailRecipients ?? []).join(", "));
+    setTelegramChatIds(auto.telegramChatIds ?? []);
     setShowForm(true);
     setSelectedId(null);
   }
@@ -262,6 +270,7 @@ export default function AutomationsPage() {
         scheduleConfig,
         dataSources,
         emailRecipients: parsedRecipients,
+        telegramChatIds,
       };
       const res = editingId
         ? await fetch(`/api/automations/${editingId}`, {
@@ -647,6 +656,48 @@ export default function AutomationsPage() {
                 </div>
               )}
 
+              {/* Telegram output — send results to Telegram chats */}
+              {telegramChats.length > 0 && (
+                <div className="space-y-3">
+                  <Label>Send to Telegram (optional)</Label>
+                  <p className="text-xs text-muted-foreground -mt-1">
+                    The AI response will be sent to the selected Telegram chats after each run.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {telegramChats.map((chat) => (
+                      <button
+                        key={chat.id}
+                        type="button"
+                        onClick={() =>
+                          setTelegramChatIds((prev) =>
+                            prev.includes(chat.id)
+                              ? prev.filter((id) => id !== chat.id)
+                              : [...prev, chat.id]
+                          )
+                        }
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          telegramChatIds.includes(chat.id)
+                            ? "border-[#2AABEE] bg-[#2AABEE]/10 text-foreground"
+                            : "border-input bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                        }`}
+                      >
+                        <svg
+                          className="h-3 w-3 text-[#2AABEE]"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                        </svg>
+                        {chat.title}
+                        <span className="text-[10px] text-muted-foreground">
+                          ({chat.type})
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <Button type="submit" disabled={saving}>
                   {saving ? "Saving..." : editingId ? "Update" : "Create Automation"}
@@ -674,146 +725,149 @@ export default function AutomationsPage() {
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : automations.length === 0 ? null : (
-            <div className="overflow-x-auto -mx-6 px-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Automation</TableHead>
-                    <TableHead>Schedule</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Runs</TableHead>
-                    <TableHead>Last Run</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {automations.map((auto) => (
-                    <Fragment key={auto.id}>
-                      <TableRow
-                        className="cursor-pointer"
-                        onClick={() => viewRuns(auto.id)}
-                      >
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{auto.title}</p>
-                            <p className="text-xs text-muted-foreground line-clamp-1">
-                              {auto.instructions}
-                            </p>
-                            {auto.dataSources.length > 0 && (
-                              <div className="flex gap-1 mt-1">
-                                {auto.dataSources.map((ds) => {
-                                  const opt = availableIntegrations.find((o) => o.value === ds);
-                                  return (
-                                    <span
-                                      key={ds}
-                                      className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                                    >
-                                      <span className="h-1.5 w-1.5 rounded-full bg-[#68c2ff]" />
-                                      {opt?.label ?? ds}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <span className="text-xs">
-                            {describeSchedule(auto.scheduleType, auto.scheduleConfig, auto.cronExpression)}
+            <div className="space-y-3">
+              {automations.map((auto) => (
+                <div
+                  key={auto.id}
+                  className="rounded-lg border border-border overflow-hidden"
+                >
+                  {/* Automation row */}
+                  <div
+                    className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                    onClick={() => viewRuns(auto.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm truncate">
+                          {auto.title}
+                        </p>
+                        <Badge
+                          variant={auto.enabled ? "default" : "secondary"}
+                          className="shrink-0"
+                        >
+                          {auto.enabled ? "Active" : "Paused"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                        {auto.instructions}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[11px] text-muted-foreground">
+                          {describeSchedule(auto.scheduleType, auto.scheduleConfig, auto.cronExpression)}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {auto._count.runs} run{auto._count.runs !== 1 ? "s" : ""}
+                        </span>
+                        {auto.lastRunAt && (
+                          <span className="text-[11px] text-muted-foreground">
+                            Last: {new Date(auto.lastRunAt).toLocaleString()}
                           </span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={auto.enabled ? "default" : "secondary"}>
-                            {auto.enabled ? "Active" : "Paused"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{auto._count.runs}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {auto.lastRunAt
-                            ? new Date(auto.lastRunAt).toLocaleString()
-                            : "Never"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div
-                            className="flex items-center justify-end gap-1"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Button variant="outline" size="sm" onClick={() => handleTrigger(auto.id)}>
-                              Run Now
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleToggle(auto.id, !auto.enabled)}>
-                              {auto.enabled ? "Pause" : "Enable"}
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => startEdit(auto)}>
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(auto.id)}
-                            >
-                              Delete
-                            </Button>
+                        )}
+                        {auto.dataSources.length > 0 && (
+                          <div className="flex gap-1">
+                            {auto.dataSources.map((ds) => {
+                              const opt = availableIntegrations.find((o) => o.value === ds);
+                              return (
+                                <span
+                                  key={ds}
+                                  className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                                >
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#68c2ff]" />
+                                  {opt?.label ?? ds}
+                                </span>
+                              );
+                            })}
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        )}
+                      </div>
+                    </div>
 
-                      {/* Expanded run history */}
-                      {selectedId === auto.id && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="bg-muted/30 p-0">
-                            <div className="p-4">
-                              <h4 className="text-sm font-semibold mb-3">Run History</h4>
-                              {loadingDetail ? (
-                                <p className="text-sm text-muted-foreground">Loading...</p>
-                              ) : !detail || detail.runs.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">
-                                  No runs yet. Click &quot;Run Now&quot; to trigger this automation.
-                                </p>
-                              ) : (
-                                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                                  {detail.runs.map((run) => (
-                                    <div key={run.id} className="rounded-lg border bg-card p-3">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <Badge variant={statusVariant[run.status] || "secondary"}>
-                                          {run.status}
-                                        </Badge>
-                                        <span className="text-xs text-muted-foreground">
-                                          {new Date(run.startedAt).toLocaleString()}
-                                        </span>
-                                        {run.completedAt && (
-                                          <span className="text-xs text-muted-foreground">
-                                            ({Math.round(
-                                              (new Date(run.completedAt).getTime() -
-                                                new Date(run.startedAt).getTime()) /
-                                                1000
-                                            )}s)
-                                          </span>
-                                        )}
-                                      </div>
-                                      {run.response && (
-                                        <pre className="text-xs bg-muted/50 rounded p-2 whitespace-pre-wrap max-h-[200px] overflow-y-auto">
-                                          {run.response}
-                                        </pre>
-                                      )}
-                                      {run.error && (
-                                        <pre className="text-xs bg-destructive/10 text-destructive rounded p-2 whitespace-pre-wrap">
-                                          {run.error}
-                                        </pre>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
+                    {/* Action buttons — always visible */}
+                    <div
+                      className="flex items-center gap-1.5 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleTrigger(auto.id)}
+                      >
+                        Run Now
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggle(auto.id, !auto.enabled)}
+                      >
+                        {auto.enabled ? "Pause" : "Enable"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => startEdit(auto)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => handleDelete(auto.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Expanded run history */}
+                  {selectedId === auto.id && (
+                    <div className="border-t border-border bg-muted/30 p-4">
+                      <h4 className="text-sm font-semibold mb-3">Run History</h4>
+                      {loadingDetail ? (
+                        <p className="text-sm text-muted-foreground">Loading...</p>
+                      ) : !detail || detail.runs.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No runs yet. Click &quot;Run Now&quot; to trigger this automation.
+                        </p>
+                      ) : (
+                        <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                          {detail.runs.map((run) => (
+                            <div key={run.id} className="rounded-lg border bg-card p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant={statusVariant[run.status] || "secondary"}>
+                                  {run.status}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(run.startedAt).toLocaleString()}
+                                </span>
+                                {run.completedAt && (
+                                  <span className="text-xs text-muted-foreground">
+                                    ({Math.round(
+                                      (new Date(run.completedAt).getTime() -
+                                        new Date(run.startedAt).getTime()) /
+                                        1000
+                                    )}s)
+                                  </span>
+                                )}
+                              </div>
+                              {run.response && (
+                                <pre className="text-xs bg-muted/50 rounded p-2 whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+                                  {run.response}
+                                </pre>
+                              )}
+                              {run.error && (
+                                <pre className="text-xs bg-destructive/10 text-destructive rounded p-2 whitespace-pre-wrap">
+                                  {run.error}
+                                </pre>
                               )}
                             </div>
-                          </TableCell>
-                        </TableRow>
+                          ))}
+                        </div>
                       )}
-                    </Fragment>
-                  ))}
-                </TableBody>
-              </Table>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
