@@ -35,8 +35,10 @@ export function ChatInterface({
   initialMessages,
 }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState("");
+  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
 
   // File changes state
   const [fileChanges, setFileChanges] = useState<FileChange[]>([]);
@@ -101,8 +103,31 @@ export function ChatInterface({
   useEffect(() => { fetchFileChanges(); }, [fetchFileChanges]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom < 80) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const onScroll = () => {
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      setShowJumpToBottom(distanceFromBottom > 200);
+    };
+    onScroll();
+    container.addEventListener("scroll", onScroll, { passive: true });
+    return () => container.removeEventListener("scroll", onScroll);
+  }, [messages.length]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   // Auto-resize textarea
   useEffect(() => {
@@ -219,7 +244,7 @@ export function ChatInterface({
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto">
+        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
           <div className={`mx-auto px-3 md:px-6 py-4 md:py-6 space-y-5 ${panelOpen ? "" : "max-w-3xl"}`}>
             {messages.length === 0 && (
               <div className="flex items-center justify-center min-h-[50vh]">
@@ -289,7 +314,19 @@ export function ChatInterface({
         </div>
 
         {/* Input */}
-        <div className="border-t border-border/60 bg-background">
+        <div className="relative border-t border-border/60 bg-background">
+          {showJumpToBottom && (
+            <button
+              type="button"
+              onClick={scrollToBottom}
+              aria-label="Scroll to bottom"
+              className="absolute left-1/2 -top-12 -translate-x-1/2 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
+              </svg>
+            </button>
+          )}
           <div className={`mx-auto px-3 md:px-6 py-3 md:py-4 ${panelOpen ? "" : "max-w-3xl"}`}>
             <form onSubmit={handleSubmit} className="relative">
               <div className="flex items-end gap-2 rounded-xl border border-border bg-card shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all">
