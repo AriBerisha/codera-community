@@ -12,10 +12,10 @@ export async function buildWhatsAppContext(userMessage: string): Promise<string>
 
   const settings = await prisma.appSettings.findUnique({
     where: { id: "default" },
-    select: { whatsappConnected: true },
+    select: { whatsappAuthState: true },
   });
 
-  if (!settings?.whatsappConnected) return "";
+  if (!settings?.whatsappAuthState) return "";
 
   const messages = await prisma.whatsAppMessage.findMany({
     orderBy: { sentAt: "desc" },

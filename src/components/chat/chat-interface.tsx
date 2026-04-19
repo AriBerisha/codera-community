@@ -4,6 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ProjectSelector, ProjectBadges } from "./project-selector";
+import { IntegrationSelector, IntegrationBadges } from "./integration-selector";
 import { MessageBubble } from "./message-bubble";
 import { MonacoDiffViewer } from "@/components/editor/monaco-diff-viewer";
 import { DefaultChatTransport } from "ai";
@@ -23,7 +24,9 @@ interface ChatInterfaceProps {
   conversationId: string;
   initialProjectIds: string[];
   initialBranches: Record<string, string>;
+  initialIntegrationIds?: string[];
   onProjectsChange: (ids: string[], branches: Record<string, string>) => void;
+  onIntegrationsChange?: (ids: string[]) => void;
   initialMessages?: UIMessage[];
 }
 
@@ -31,7 +34,9 @@ export function ChatInterface({
   conversationId,
   initialProjectIds,
   initialBranches,
+  initialIntegrationIds = [],
   onProjectsChange,
+  onIntegrationsChange,
   initialMessages,
 }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -229,17 +234,30 @@ export function ChatInterface({
           ? `${mobileView === "changes" ? "hidden md:flex" : "flex"} md:w-[420px] md:min-w-[360px] flex-1 md:flex-initial`
           : "flex flex-1"
       }`}>
-        {/* Repository selector (new chat) or badges (existing chat) + Workflow button */}
-        <div className="flex items-center justify-between border-b border-border/60 px-3 md:px-6 py-2.5">
-          {initialMessages && initialMessages.length > 0 ? (
-            <ProjectBadges projectIds={initialProjectIds} branches={initialBranches} />
-          ) : (
-            <ProjectSelector
-              selectedIds={initialProjectIds}
-              branches={initialBranches}
-              onChange={onProjectsChange}
-            />
-          )}
+        {/* Repository + integration selectors (new chat) or badges (existing chat) + Workflow button */}
+        <div className="flex items-center justify-between border-b border-border/60 px-3 md:px-6 py-2.5 gap-2">
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
+            {initialMessages && initialMessages.length > 0 ? (
+              <>
+                <ProjectBadges projectIds={initialProjectIds} branches={initialBranches} />
+                <IntegrationBadges integrationIds={initialIntegrationIds} />
+              </>
+            ) : (
+              <>
+                <ProjectSelector
+                  selectedIds={initialProjectIds}
+                  branches={initialBranches}
+                  onChange={onProjectsChange}
+                />
+                {onIntegrationsChange && (
+                  <IntegrationSelector
+                    selectedIds={initialIntegrationIds}
+                    onChange={onIntegrationsChange}
+                  />
+                )}
+              </>
+            )}
+          </div>
           <WorkflowLauncher conversationId={conversationId} />
         </div>
 

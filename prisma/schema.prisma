@@ -369,6 +369,7 @@ model Conversation {
   userId          String
   projectIds      String[]
   projectBranches Json?
+  integrationIds  String[] // empty = all team-allowed; otherwise restrict to these (e.g. "telegram", "whatsapp", "github")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

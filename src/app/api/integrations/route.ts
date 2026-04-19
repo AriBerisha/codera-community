@@ -33,7 +33,9 @@ export async function GET() {
   if (settings?.telegramBotToken) {
     integrations.push({ value: "telegram", label: "Telegram" });
   }
-  if (settings?.whatsappConnected) {
+  // Saved auth state is the durable signal — whatsappConnected can briefly
+  // drift to false across restarts/HMR before the socket re-authenticates.
+  if (settings?.whatsappAuthState) {
     integrations.push({ value: "whatsapp", label: "WhatsApp" });
   }
   if (settings?.resendApiKey && settings.resendFromEmail) {

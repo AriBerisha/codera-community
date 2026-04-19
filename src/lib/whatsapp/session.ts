@@ -19,32 +19,66 @@ type SessionState = {
   lastError: string | null;
 };
 
-let socket: WASocket | null = null;
-let sessionState: SessionState = {
-  status: "disconnected",
-  qr: null,
-  linkedPhone: null,
-  linkedName: null,
-  lastError: null,
+// Singleton store pinned to globalThis so Next.js/Turbopack HMR reloads of
+// this module don't orphan a live Baileys socket behind a reset "disconnected"
+// state. Without this, a fresh module instance sees `socket = null` while the
+// real socket is still running on the prior instance.
+type GlobalStore = {
+  socket: WASocket | null;
+  sessionState: SessionState;
+  starting: Promise<void> | null;
+  intentionalLogout: boolean;
 };
-let starting: Promise<void> | null = null;
-let intentionalLogout = false;
+
+const globalKey = Symbol.for("app.whatsapp.session");
+const globalObj = globalThis as unknown as { [k: symbol]: GlobalStore | undefined };
+
+const store: GlobalStore =
+  globalObj[globalKey] ??
+  (globalObj[globalKey] = {
+    socket: null,
+    sessionState: {
+      status: "disconnected",
+      qr: null,
+      linkedPhone: null,
+      linkedName: null,
+      lastError: null,
+    },
+    starting: null,
+    intentionalLogout: false,
+  });
 
 export function getSessionState(): SessionState {
-  return { ...sessionState };
+  // Self-heal: if the socket has authenticated (has a logged-in user) but the
+  // status hasn't caught up (e.g. HMR orphaned the "open" event, or the update
+  // was interleaved), derive "connected" from the live socket.
+  const sock = store.socket;
+  if (sock?.user && store.sessionState.status !== "connected") {
+    const phone =
+      sock.user.id?.split(":")[0]?.split("@")[0] ?? store.sessionState.linkedPhone;
+    store.sessionState = {
+      status: "connected",
+      qr: null,
+      linkedPhone: phone,
+      linkedName:
+        sock.user.name ?? sock.user.verifiedName ?? store.sessionState.linkedName,
+      lastError: null,
+    };
+  }
+  return { ...store.sessionState };
 }
 
 export async function startSession(): Promise<void> {
-  if (socket && sessionState.status !== "disconnected") return;
-  if (starting) return starting;
+  if (store.socket && store.sessionState.status !== "disconnected") return;
+  if (store.starting) return store.starting;
 
-  starting = (async () => {
+  store.starting = (async () => {
     try {
-      sessionState = {
+      store.sessionState = {
         status: "connecting",
         qr: null,
-        linkedPhone: sessionState.linkedPhone,
-        linkedName: sessionState.linkedName,
+        linkedPhone: store.sessionState.linkedPhone,
+        linkedName: store.sessionState.linkedName,
         lastError: null,
       };
 
@@ -53,7 +87,7 @@ export async function startSession(): Promise<void> {
         version: [2, 3000, 0] as [number, number, number],
       }));
 
-      socket = makeWASocket({
+      store.socket = makeWASocket({
         version,
         auth: state,
         browser: Browsers.appropriate("Chrome"),
@@ -62,17 +96,17 @@ export async function startSession(): Promise<void> {
         syncFullHistory: false,
       });
 
-      socket.ev.on("creds.update", saveCreds);
+      store.socket.ev.on("creds.update", saveCreds);
 
-      socket.ev.on(
+      store.socket.ev.on(
         "connection.update",
         async (update: Partial<ConnectionState>) => {
           const { connection, qr, lastDisconnect } = update;
 
           if (qr) {
             try {
-              sessionState = {
-                ...sessionState,
+              store.sessionState = {
+                ...store.sessionState,
                 status: "pairing",
                 qr: await qrToDataURL(qr, { margin: 1, scale: 6 }),
                 lastError: null,
@@ -83,9 +117,9 @@ export async function startSession(): Promise<void> {
           }
 
           if (connection === "open") {
-            const me = socket?.user;
+            const me = store.socket?.user;
             const phone = me?.id?.split(":")[0]?.split("@")[0] ?? null;
-            sessionState = {
+            store.sessionState = {
               status: "connected",
               qr: null,
               linkedPhone: phone,
@@ -98,13 +132,13 @@ export async function startSession(): Promise<void> {
                 update: {
                   whatsappConnected: true,
                   whatsappLinkedPhone: phone,
-                  whatsappLinkedName: sessionState.linkedName,
+                  whatsappLinkedName: store.sessionState.linkedName,
                 },
                 create: {
                   id: "default",
                   whatsappConnected: true,
                   whatsappLinkedPhone: phone,
-                  whatsappLinkedName: sessionState.linkedName,
+                  whatsappLinkedName: store.sessionState.linkedName,
                 },
               })
               .catch((err) =>
@@ -120,12 +154,12 @@ export async function startSession(): Promise<void> {
             const loggedOut = reason === DisconnectReason.loggedOut;
             const restartRequired = reason === DisconnectReason.restartRequired;
             const badSession = reason === DisconnectReason.badSession;
-            socket = null;
+            store.socket = null;
 
-            if (intentionalLogout || loggedOut) {
-              intentionalLogout = false;
+            if (store.intentionalLogout || loggedOut) {
+              store.intentionalLogout = false;
               await clearAuthState().catch(() => {});
-              sessionState = {
+              store.sessionState = {
                 status: "disconnected",
                 qr: null,
                 linkedPhone: null,
@@ -139,8 +173,8 @@ export async function startSession(): Promise<void> {
             // stream-error/conflict events. Surface as "connecting" rather
             // than leaving a stream-error message in the UI.
             const willReconnect = !badSession;
-            sessionState = {
-              ...sessionState,
+            store.sessionState = {
+              ...store.sessionState,
               status: willReconnect ? "connecting" : "disconnected",
               qr: null,
               lastError: willReconnect
@@ -161,44 +195,44 @@ export async function startSession(): Promise<void> {
       );
 
       const { handleIncomingMessages } = await import("./sync");
-      socket.ev.on("messages.upsert", async (evt) => {
+      store.socket.ev.on("messages.upsert", async (evt) => {
         try {
-          await handleIncomingMessages(socket!, evt);
+          if (store.socket) await handleIncomingMessages(store.socket, evt);
         } catch (err) {
           console.error("[whatsapp] message handler failed", err);
         }
       });
     } catch (err) {
-      sessionState = {
-        ...sessionState,
+      store.sessionState = {
+        ...store.sessionState,
         status: "disconnected",
         lastError: err instanceof Error ? err.message : String(err),
       };
-      socket = null;
+      store.socket = null;
       throw err;
     } finally {
-      starting = null;
+      store.starting = null;
     }
   })();
 
-  return starting;
+  return store.starting;
 }
 
 export async function logoutSession(): Promise<void> {
-  intentionalLogout = true;
+  store.intentionalLogout = true;
   try {
-    await socket?.logout();
+    await store.socket?.logout();
   } catch {
     // ignore
   }
   try {
-    socket?.end(undefined);
+    store.socket?.end(undefined);
   } catch {
     // ignore
   }
-  socket = null;
+  store.socket = null;
   await clearAuthState();
-  sessionState = {
+  store.sessionState = {
     status: "disconnected",
     qr: null,
     linkedPhone: null,
@@ -208,20 +242,26 @@ export async function logoutSession(): Promise<void> {
 }
 
 export function getSocket(): WASocket | null {
-  return socket;
+  return store.socket;
 }
 
 export function isConnected(): boolean {
-  return sessionState.status === "connected" && socket !== null;
+  // A live authenticated socket is the source of truth; the status flag can
+  // lag behind (see getSessionState).
+  if (store.socket?.user) return true;
+  return store.sessionState.status === "connected" && store.socket !== null;
 }
 
 export async function sendWhatsAppMessage(
   chatId: string,
   text: string
 ): Promise<{ messageId: string | null }> {
-  if (!socket || sessionState.status !== "connected") {
+  // Trust socket liveness over the status flag — the flag can lag during
+  // reconnects or HMR. If we have an authenticated socket, just send.
+  const sock = store.socket;
+  if (!sock?.user) {
     throw new Error("WhatsApp is not connected");
   }
-  const res = await socket.sendMessage(chatId, { text });
+  const res = await sock.sendMessage(chatId, { text });
   return { messageId: res?.key?.id ?? null };
 }

@@ -32,7 +32,7 @@ export async function GET() {
     id: "whatsapp",
     name: "WhatsApp",
     platform: "whatsapp",
-    connected: !!settings?.whatsappConnected,
+    connected: !!settings?.whatsappAuthState,
   });
 
   return NextResponse.json(agents);

@@ -17,6 +17,7 @@ interface Conversation {
   title: string | null;
   projectIds: string[];
   projectBranches: Record<string, string> | null;
+  integrationIds: string[];
   messages: DbMessage[];
 }
 
@@ -52,6 +53,17 @@ export default function ChatConversationPage() {
     }
   }
 
+  async function handleIntegrationsChange(integrationIds: string[]) {
+    await fetch(`/api/conversations/${conversationId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ integrationIds }),
+    });
+    if (conversation) {
+      setConversation({ ...conversation, integrationIds });
+    }
+  }
+
   return (
     <div className="flex h-full">
       <div className="hidden md:block w-[240px] border-r border-[#21262d] bg-[#0d1117] shrink-0">
@@ -74,7 +86,9 @@ export default function ChatConversationPage() {
             conversationId={conversationId}
             initialProjectIds={conversation.projectIds}
             initialBranches={conversation.projectBranches || {}}
+            initialIntegrationIds={conversation.integrationIds || []}
             onProjectsChange={handleProjectsChange}
+            onIntegrationsChange={handleIntegrationsChange}
             initialMessages={(conversation.messages || []).map((m) => ({
               id: m.id,
               role: m.role === "USER" ? "user" as const : "assistant" as const,

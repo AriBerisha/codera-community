@@ -1,4 +1,4 @@
-import { streamText, convertToModelMessages } from "ai";
+import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getModelInstance } from "@/lib/ai/providers";
@@ -13,6 +13,7 @@ import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { getUserAllowedIntegrations, isIntegrationAllowed } from "@/lib/teams/integrations";
 import { parseFileEdits, applyEdit } from "@/lib/ai/parse-file-edits";
 import { getLanguageFromPath } from "@/lib/gitlab/file-filter";
+import { buildChatsDirectory, buildSocialTools } from "@/lib/ai/tools/social-tools";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -22,14 +23,16 @@ export async function POST(req: Request) {
 
   const { messages, conversationId } = await req.json();
 
-  // Load conversation to get selected projectIds
+  // Load conversation to get selected projectIds + integrationIds
   let projectIds: string[] = [];
+  let selectedIntegrations: string[] = [];
   if (conversationId) {
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId, userId: session.user.id },
     });
     if (conversation) {
       projectIds = conversation.projectIds;
+      selectedIntegrations = conversation.integrationIds;
     }
   }
 
@@ -91,9 +94,12 @@ export async function POST(req: Request) {
     }
   }
 
-  // Determine which integrations this user may access
+  // Determine which integrations this user may access, further narrowed
+  // by any explicit per-conversation selection (empty list = no narrowing).
   const allowed = await getUserAllowedIntegrations(session.user.id, session.user.role);
-  const can = (i: string) => isIntegrationAllowed(allowed, i);
+  const can = (i: string) =>
+    isIntegrationAllowed(allowed, i) &&
+    (selectedIntegrations.length === 0 || selectedIntegrations.includes(i));
 
   // Build code context from indexed files + other integrations (gated by team)
   const contextParts: Promise<string>[] = [];
@@ -110,7 +116,19 @@ export async function POST(req: Request) {
   const contextResults = await Promise.all(contextParts);
   const fullContext = contextResults.join("");
   const projectPaths = selectedProjects.map(p => p.pathWithNamespace);
-  const systemPrompt = buildSystemPrompt(fullContext, projectPaths);
+
+  // Give the model a directory of real chat ids it can call tools with
+  const chatsDirectory = await buildChatsDirectory({
+    telegram: can("telegram"),
+    whatsapp: can("whatsapp"),
+  });
+  const systemPrompt = buildSystemPrompt(fullContext, projectPaths) + chatsDirectory;
+
+  // Tool calling — currently only social send tools; gated by effective permissions
+  const tools = buildSocialTools({
+    telegram: can("telegram"),
+    whatsapp: can("whatsapp"),
+  });
 
   // Get the configured AI model
   const model = await getModelInstance();
@@ -123,6 +141,8 @@ export async function POST(req: Request) {
     model,
     system: systemPrompt,
     messages: modelMessages,
+    tools,
+    stopWhen: stepCountIs(5),
     maxOutputTokens: 8192,
     async onFinish({ text }) {
       if (conversationId) {

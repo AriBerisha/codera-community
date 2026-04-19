@@ -29,13 +29,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { title, projectIds } = await req.json();
+  const { title, projectIds, integrationIds } = await req.json();
 
   const conversation = await prisma.conversation.create({
     data: {
       title: title || "New Chat",
       userId: session.user.id,
       projectIds: projectIds || [],
+      integrationIds: integrationIds || [],
     },
   });
 

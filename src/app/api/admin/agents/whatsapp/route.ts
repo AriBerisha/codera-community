@@ -15,13 +15,17 @@ export async function GET() {
     where: { id: "default" },
     select: {
       whatsappConnected: true,
+      whatsappAuthState: true,
       whatsappLinkedPhone: true,
       whatsappLinkedName: true,
     },
   });
 
   const state = getSessionState();
-  const isConnected = state.status === "connected" || !!settings?.whatsappConnected;
+  const isConnected =
+    state.status === "connected" ||
+    !!settings?.whatsappConnected ||
+    !!settings?.whatsappAuthState;
 
   if (!isConnected) {
     return NextResponse.json({ connected: false, chats: [] });

@@ -39,7 +39,7 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const { title, projectIds, projectBranches } = await req.json();
+  const { title, projectIds, projectBranches, integrationIds } = await req.json();
 
   const conversation = await prisma.conversation.update({
     where: { id, userId: session.user.id },
@@ -47,6 +47,7 @@ export async function PATCH(
       ...(title !== undefined && { title }),
       ...(projectIds !== undefined && { projectIds }),
       ...(projectBranches !== undefined && { projectBranches }),
+      ...(integrationIds !== undefined && { integrationIds }),
     },
   });
 
