@@ -33,6 +33,9 @@ export async function GET() {
   if (settings?.telegramBotToken) {
     integrations.push({ value: "telegram", label: "Telegram" });
   }
+  if (settings?.whatsappConnected) {
+    integrations.push({ value: "whatsapp", label: "WhatsApp" });
+  }
   if (settings?.resendApiKey && settings.resendFromEmail) {
     integrations.push({ value: "resend", label: "Resend" });
   }

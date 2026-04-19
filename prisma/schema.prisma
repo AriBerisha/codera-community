@@ -132,6 +132,14 @@ model AppSettings {
   telegramBotPrompt     String?  @db.Text  // system prompt for auto-replies
   telegramWebhookSecret String?  // secret token for webhook verification
 
+  // WhatsApp (Baileys — paired via QR, self-hosted session)
+  whatsappConnected    Boolean @default(false)
+  whatsappLinkedPhone  String?                 // e.g., "+1 555 123 4567"
+  whatsappLinkedName   String?                 // display name of paired account
+  whatsappAutoReply    Boolean @default(false)
+  whatsappBotPrompt    String? @db.Text        // system prompt for auto-replies
+  whatsappAuthState    String? @db.Text        // encrypted Baileys auth state blob
+
   // Resend (Email)
   resendApiKey    String?  // encrypted
   resendFromEmail String?  // e.g. "noreply@yourdomain.com"
@@ -533,6 +541,27 @@ model TelegramMessage {
 }
 
 // ============================================================
+// WHATSAPP MESSAGES (persisted Baileys session messages)
+// ============================================================
+
+model WhatsAppMessage {
+  id         String   @id @default(cuid())
+  messageId  String?  @unique // WhatsApp message id — null for app-sent bookkeeping rows
+  chatId     String   // JID: "<number>@s.whatsapp.net" for DMs, "<id>@g.us" for groups
+  chatTitle  String?  // Group subject or contact name
+  chatType   String   // private | group
+  fromName   String   // Sender display name
+  fromNumber String?  // Sender phone (E.164-ish)
+  text       String   @db.Text
+  isBot      Boolean  @default(false) // true if sent by us via the linked device
+  sentAt     DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([chatId])
+  @@index([sentAt])
+}
+
+// ============================================================
 // AUTOMATIONS (scheduled AI cron jobs)
 // ============================================================
 
@@ -546,6 +575,7 @@ model Automation {
   dataSources     String[] @default([])           // e.g. ["jira","confluence","sharepoint","gitlab","github"]
   emailRecipients String[] @default([])          // email addresses to send results to (requires resend)
   telegramChatIds String[] @default([])          // Telegram chat IDs to send results to
+  whatsappChatIds String[] @default([])          // WhatsApp JIDs to send results to
   enabled         Boolean  @default(true)
   lastRunAt      DateTime?
   userId         String

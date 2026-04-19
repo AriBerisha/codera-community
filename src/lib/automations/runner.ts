@@ -6,9 +6,11 @@ import { buildJiraContext } from "@/lib/ai/jira-context";
 import { buildConfluenceContext } from "@/lib/ai/confluence-context";
 import { buildSharePointContext } from "@/lib/ai/sharepoint-context";
 import { buildTelegramContext } from "@/lib/ai/telegram-context";
+import { buildWhatsAppContext } from "@/lib/ai/whatsapp-context";
 import { buildMcpContext } from "@/lib/ai/mcp-context";
 import { ResendClient } from "@/lib/resend/client";
 import { TelegramClient } from "@/lib/telegram/client";
+import { sendWhatsAppMessage, isConnected as whatsappConnected } from "@/lib/whatsapp/session";
 import { decrypt } from "@/lib/crypto";
 
 /**
@@ -135,6 +137,9 @@ export async function executeAutomation(automationId: string): Promise<void> {
     if (sources.includes("telegram")) {
       contextParts.push(buildTelegramContext(automation.instructions));
     }
+    if (sources.includes("whatsapp")) {
+      contextParts.push(buildWhatsAppContext(automation.instructions));
+    }
     if (sources.includes("mcp")) {
       contextParts.push(buildMcpContext(automation.instructions));
     }
@@ -223,6 +228,35 @@ export async function executeAutomation(automationId: string): Promise<void> {
         }
       } catch (tgErr) {
         console.error(`Failed to send automation Telegram for ${automationId}:`, tgErr);
+      }
+    }
+
+    // Send to WhatsApp chats if configured
+    if (automation.whatsappChatIds.length > 0 && whatsappConnected()) {
+      const body = `[${automation.title}]\n\n${text}`;
+      for (const chatId of automation.whatsappChatIds) {
+        try {
+          const { messageId } = await sendWhatsAppMessage(chatId, body);
+          const existing = await prisma.whatsAppMessage.findFirst({
+            where: { chatId, chatTitle: { not: null } },
+            select: { chatTitle: true, chatType: true },
+          });
+          await prisma.whatsAppMessage.create({
+            data: {
+              messageId,
+              chatId,
+              chatTitle: existing?.chatTitle ?? null,
+              chatType: existing?.chatType ?? (chatId.endsWith("@g.us") ? "group" : "private"),
+              fromName: "Bot",
+              fromNumber: null,
+              text: body,
+              isBot: true,
+              sentAt: new Date(),
+            },
+          });
+        } catch (waErr) {
+          console.error(`Failed to send to WhatsApp chat ${chatId}:`, waErr);
+        }
       }
     }
   } catch (err) {

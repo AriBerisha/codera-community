@@ -7,6 +7,7 @@ import { buildJiraContext } from "@/lib/ai/jira-context";
 import { buildConfluenceContext } from "@/lib/ai/confluence-context";
 import { buildSharePointContext } from "@/lib/ai/sharepoint-context";
 import { buildTelegramContext } from "@/lib/ai/telegram-context";
+import { buildWhatsAppContext } from "@/lib/ai/whatsapp-context";
 import { buildMcpContext } from "@/lib/ai/mcp-context";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { getUserAllowedIntegrations, isIntegrationAllowed } from "@/lib/teams/integrations";
@@ -103,6 +104,7 @@ export async function POST(req: Request) {
   if (can("confluence")) contextParts.push(buildConfluenceContext(userContent));
   if (can("sharepoint")) contextParts.push(buildSharePointContext(userContent));
   if (can("telegram"))   contextParts.push(buildTelegramContext(userContent));
+  if (can("whatsapp"))   contextParts.push(buildWhatsAppContext(userContent));
   if (can("mcp"))        contextParts.push(buildMcpContext(userContent));
 
   const contextResults = await Promise.all(contextParts);

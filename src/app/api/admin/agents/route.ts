@@ -28,5 +28,12 @@ export async function GET() {
     connected: !!settings?.telegramBotToken,
   });
 
+  agents.push({
+    id: "whatsapp",
+    name: "WhatsApp",
+    platform: "whatsapp",
+    connected: !!settings?.whatsappConnected,
+  });
+
   return NextResponse.json(agents);
 }
