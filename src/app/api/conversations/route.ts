@@ -28,6 +28,12 @@ export async function POST(req: Request) {
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (session.user.role === "PENDING") {
+    return NextResponse.json(
+      { error: "Your account is pending approval" },
+      { status: 403 }
+    );
+  }
 
   const { title, projectIds, integrationIds } = await req.json();
 

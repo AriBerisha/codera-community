@@ -215,7 +215,15 @@ export default function UsersPage() {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={user.role === "OWNER" ? "destructive" : user.role === "ADMIN" ? "default" : "secondary"}
+                      variant={
+                        user.role === "OWNER"
+                          ? "destructive"
+                          : user.role === "ADMIN"
+                            ? "default"
+                            : user.role === "PENDING"
+                              ? "outline"
+                              : "secondary"
+                      }
                     >
                       {user.role}
                     </Badge>
@@ -224,20 +232,31 @@ export default function UsersPage() {
                     {new Date(user.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
+                    {user.role === "PENDING" && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleRoleChange(user.id, "MEMBER")}
+                      >
+                        Approve
+                      </Button>
+                    )}
                     {user.role !== "OWNER" && (
                       <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            handleRoleChange(
-                              user.id,
-                              user.role === "ADMIN" ? "MEMBER" : "ADMIN"
-                            )
-                          }
-                        >
-                          {user.role === "ADMIN" ? "Demote" : "Promote"}
-                        </Button>
+                        {user.role !== "PENDING" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleRoleChange(
+                                user.id,
+                                user.role === "ADMIN" ? "MEMBER" : "ADMIN"
+                              )
+                            }
+                          >
+                            {user.role === "ADMIN" ? "Demote" : "Promote"}
+                          </Button>
+                        )}
                         <Button
                           variant="destructive"
                           size="sm"

@@ -16,7 +16,7 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { href: "/chat", label: "Chat", icon: MessageIcon, roles: ["OWNER", "ADMIN", "MEMBER"] },
+  { href: "/chat", label: "Chat", icon: MessageIcon, roles: ["OWNER", "ADMIN", "MEMBER", "PENDING"] },
   { href: "/admin/agents", label: "Agents", icon: AgentsIcon, roles: ["OWNER", "ADMIN"] },
   { href: "/admin/users", label: "Users", icon: UsersIcon, roles: ["OWNER", "ADMIN"] },
   { href: "/admin/teams", label: "Teams", icon: TeamsIcon, roles: ["OWNER", "ADMIN"] },

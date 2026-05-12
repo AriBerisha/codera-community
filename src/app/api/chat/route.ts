@@ -20,6 +20,9 @@ export async function POST(req: Request) {
   if (!session?.user) {
     return new Response("Unauthorized", { status: 401 });
   }
+  if (session.user.role === "PENDING") {
+    return new Response("Your account is pending approval", { status: 403 });
+  }
 
   const { messages, conversationId } = await req.json();
 

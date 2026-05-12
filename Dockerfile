@@ -32,8 +32,10 @@ COPY --from=builder /app/.next/static ./.next/static
 # Copy Prisma schema and migrations for deploy
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Full node_modules from the deps stage so `prisma migrate deploy` has all its
+# transitive runtime dependencies (effect, @prisma/config, etc.). The Next.js
+# standalone output only ships a curated subset, which omits these.
+COPY --from=deps /app/node_modules ./node_modules
 
 USER nextjs
 EXPOSE 3000

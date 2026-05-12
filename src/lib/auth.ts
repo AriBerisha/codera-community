@@ -1,14 +1,57 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import bcrypt from "bcrypt";
 import { prisma } from "./prisma";
 import { authConfig } from "./auth.config";
+
+const allowedDomain = process.env.SSO_ALLOWED_DOMAIN?.trim().toLowerCase() || "";
+const googleClientId = process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret =
+  process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+
+export const ssoEnabled = Boolean(googleClientId && googleClientSecret && allowedDomain);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   callbacks: {
     ...authConfig.callbacks,
-    async jwt({ token, user }) {
+    async signIn({ account, profile }) {
+      if (account?.provider !== "google") return true;
+
+      const email = profile?.email?.toLowerCase();
+      const verified = (profile as { email_verified?: boolean } | undefined)?.email_verified;
+      const hd = (profile as { hd?: string } | undefined)?.hd?.toLowerCase();
+      const emailDomain = email?.split("@")[1];
+
+      if (!email || !verified) return false;
+      if (!allowedDomain) return false;
+      if (hd !== allowedDomain && emailDomain !== allowedDomain) return false;
+
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (!existing) {
+        await prisma.user.create({
+          data: {
+            email,
+            name: profile?.name || email,
+            role: "PENDING",
+          },
+        });
+      }
+      return true;
+    },
+    async jwt({ token, user, account, profile }) {
+      if (account?.provider === "google" && profile?.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: profile.email.toLowerCase() },
+          select: { id: true, role: true },
+        });
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role;
+        }
+        return token;
+      }
       if (user) {
         token.role = (user as { role: string }).role;
         token.id = user.id;
@@ -33,6 +76,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   providers: [
+    ...(googleClientId && googleClientSecret
+      ? [
+          Google({
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+            // Restrict the Google account picker to the allowed Workspace domain.
+            // `hd` is a hint only — the signIn callback enforces the actual check.
+            authorization: allowedDomain
+              ? { params: { hd: allowedDomain, prompt: "select_account" } }
+              : undefined,
+          }),
+        ]
+      : []),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },

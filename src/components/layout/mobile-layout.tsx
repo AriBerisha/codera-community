@@ -79,6 +79,12 @@ export function MobileLayout({
             <img src={brand.logo} alt={brand.name} className="h-6 object-contain" />
           </div>
 
+          {userRole === "PENDING" && (
+            <div className="shrink-0 border-b border-[#f7c95a]/30 bg-[#f7c95a]/10 px-4 py-2.5 text-[12px] text-[#f0c674]">
+              Your account is pending approval. An administrator must grant access before you can send messages or use integrations.
+            </div>
+          )}
+
           <div className="flex-1 overflow-auto">
             {children}
           </div>
