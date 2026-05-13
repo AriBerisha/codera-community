@@ -1,13 +1,16 @@
-"use client";
-
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
+
+type ConnectorStatus = "connected" | "not-configured" | "coming-soon";
 
 interface Connector {
   name: string;
   description: string;
   icon: React.ReactNode;
   href?: string;
-  status: "active" | "coming-soon";
+  status: ConnectorStatus;
 }
 
 interface Section {
@@ -15,121 +18,149 @@ interface Section {
   connectors: Connector[];
 }
 
-const sections: Section[] = [
-  {
-    title: "Code Repositories",
-    connectors: [
-      {
-        name: "GitLab",
-        description: "Connect your GitLab group, sync and index repositories.",
-        icon: <GitLabIcon />,
-        href: "/admin/connectors/gitlab",
-        status: "active",
-      },
-      {
-        name: "GitHub",
-        description: "Connect GitHub organizations and repositories.",
-        icon: <GitHubIcon />,
-        href: "/admin/connectors/github",
-        status: "active",
-      },
-      {
-        name: "Bitbucket",
-        description: "Connect Bitbucket workspaces and repositories.",
-        icon: <BitbucketIcon />,
-        status: "coming-soon",
-      },
-    ],
-  },
-  {
-    title: "Project Management",
-    connectors: [
-      {
-        name: "Jira",
-        description: "Sync Jira issues and link code changes to tickets.",
-        icon: <JiraIcon />,
-        href: "/admin/connectors/jira",
-        status: "active",
-      },
-      {
-        name: "Confluence",
-        description: "Index Confluence pages for AI-powered search.",
-        icon: <ConfluenceIcon />,
-        href: "/admin/connectors/confluence",
-        status: "active",
-      },
-    ],
-  },
-  {
-    title: "Documentation",
-    connectors: [
-      {
-        name: "SharePoint (BETA)",
-        description: "Index SharePoint documents like Word files and other resources.",
-        icon: <SharePointIcon />,
-        href: "/admin/connectors/sharepoint",
-        status: "active",
-      },
-    ],
-  },
-  {
-    title: "Custom",
-    connectors: [
-      {
-        name: "MCP Servers",
-        description: "Connect custom MCP servers to extend AI with external tools and data.",
-        icon: <McpIcon />,
-        href: "/admin/connectors/mcp",
-        status: "active",
-      },
-    ],
-  },
-  {
-    title: "Socials",
-    connectors: [
-      {
-        name: "Telegram",
-        description: "Connect a Telegram bot to receive messages and send notifications.",
-        icon: <TelegramIcon />,
-        href: "/admin/connectors/telegram",
-        status: "active",
-      },
-      {
-        name: "WhatsApp",
-        description: "Link your WhatsApp account via QR pairing to read and send messages.",
-        icon: <WhatsAppIcon />,
-        href: "/admin/connectors/whatsapp",
-        status: "active",
-      },
-      {
-        name: "Discord",
-        description: "Connect Discord bots and receive channel messages.",
-        icon: <DiscordIcon />,
-        status: "coming-soon",
-      },
-    ],
-  },
-  {
-    title: "Communications",
-    connectors: [
-      {
-        name: "Resend",
-        description: "Send email notifications and automation reports via Resend.",
-        icon: <ResendIcon />,
-        href: "/admin/connectors/resend",
-        status: "active",
-      },
-      {
-        name: "Slack",
-        description: "Send notifications and interact via Slack channels.",
-        icon: <SlackIcon />,
-        status: "coming-soon",
-      },
-    ],
-  },
-];
+async function getConnectorState() {
+  const [settings, mcpCount] = await Promise.all([
+    prisma.appSettings.findUnique({ where: { id: "default" } }),
+    prisma.mcpServer.count({ where: { enabled: true } }),
+  ]);
 
-export default function ConnectorsPage() {
+  // A connector is "connected" when the credentials needed to actually use it
+  // are present. We avoid using whether *any* field is set — partial setup
+  // (e.g. URL without token) shouldn't look connected.
+  return {
+    gitlab: Boolean(settings?.gitlabUrl && settings?.gitlabPat),
+    github: Boolean(settings?.githubPat),
+    jira: Boolean(settings?.jiraUrl && settings?.jiraEmail && settings?.jiraApiToken),
+    confluence: Boolean(
+      settings?.confluenceUrl && settings?.confluenceEmail && settings?.confluenceApiToken
+    ),
+    sharepoint: Boolean(
+      settings?.sharepointTenantId && settings?.sharepointClientId && settings?.sharepointClientSecret
+    ),
+    telegram: Boolean(settings?.telegramBotToken),
+    whatsapp: Boolean(settings?.whatsappConnected),
+    resend: Boolean(settings?.resendApiKey && settings?.resendFromEmail),
+    mcp: mcpCount > 0,
+  };
+}
+
+export default async function ConnectorsPage() {
+  const state = await getConnectorState();
+
+  const sections: Section[] = [
+    {
+      title: "Code Repositories",
+      connectors: [
+        {
+          name: "GitLab",
+          description: "Connect your GitLab group, sync and index repositories.",
+          icon: <GitLabIcon />,
+          href: "/admin/connectors/gitlab",
+          status: state.gitlab ? "connected" : "not-configured",
+        },
+        {
+          name: "GitHub",
+          description: "Connect GitHub organizations and repositories.",
+          icon: <GitHubIcon />,
+          href: "/admin/connectors/github",
+          status: state.github ? "connected" : "not-configured",
+        },
+        {
+          name: "Bitbucket",
+          description: "Connect Bitbucket workspaces and repositories.",
+          icon: <BitbucketIcon />,
+          status: "coming-soon",
+        },
+      ],
+    },
+    {
+      title: "Project Management",
+      connectors: [
+        {
+          name: "Jira",
+          description: "Sync Jira issues and link code changes to tickets.",
+          icon: <JiraIcon />,
+          href: "/admin/connectors/jira",
+          status: state.jira ? "connected" : "not-configured",
+        },
+        {
+          name: "Confluence",
+          description: "Index Confluence pages for AI-powered search.",
+          icon: <ConfluenceIcon />,
+          href: "/admin/connectors/confluence",
+          status: state.confluence ? "connected" : "not-configured",
+        },
+      ],
+    },
+    {
+      title: "Documentation",
+      connectors: [
+        {
+          name: "SharePoint (BETA)",
+          description: "Index SharePoint documents like Word files and other resources.",
+          icon: <SharePointIcon />,
+          href: "/admin/connectors/sharepoint",
+          status: state.sharepoint ? "connected" : "not-configured",
+        },
+      ],
+    },
+    {
+      title: "Custom",
+      connectors: [
+        {
+          name: "MCP Servers",
+          description: "Connect custom MCP servers to extend AI with external tools and data.",
+          icon: <McpIcon />,
+          href: "/admin/connectors/mcp",
+          status: state.mcp ? "connected" : "not-configured",
+        },
+      ],
+    },
+    {
+      title: "Socials",
+      connectors: [
+        {
+          name: "Telegram",
+          description: "Connect a Telegram bot to receive messages and send notifications.",
+          icon: <TelegramIcon />,
+          href: "/admin/connectors/telegram",
+          status: state.telegram ? "connected" : "not-configured",
+        },
+        {
+          name: "WhatsApp",
+          description: "Link your WhatsApp account via QR pairing to read and send messages.",
+          icon: <WhatsAppIcon />,
+          href: "/admin/connectors/whatsapp",
+          status: state.whatsapp ? "connected" : "not-configured",
+        },
+        {
+          name: "Discord",
+          description: "Connect Discord bots and receive channel messages.",
+          icon: <DiscordIcon />,
+          status: "coming-soon",
+        },
+      ],
+    },
+    {
+      title: "Communications",
+      connectors: [
+        {
+          name: "Resend",
+          description: "Send email notifications and automation reports via Resend.",
+          icon: <ResendIcon />,
+          href: "/admin/connectors/resend",
+          status: state.resend ? "connected" : "not-configured",
+        },
+        {
+          name: "Slack",
+          description: "Send notifications and interact via Slack channels.",
+          icon: <SlackIcon />,
+          status: "coming-soon",
+        },
+      ],
+    },
+  ];
+
   return (
     <div className="p-4 md:p-6 max-w-5xl space-y-6 md:space-y-8">
       <div>
@@ -146,35 +177,40 @@ export default function ConnectorsPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {section.connectors.map((connector) => {
+              const isClickable = connector.status !== "coming-soon" && connector.href;
               const card = (
                 <div
-                  key={connector.name}
-                  className={`relative rounded-xl border bg-card p-4 transition-all ${
-                    connector.status === "active"
+                  className={`relative rounded-xl border bg-card p-4 transition-all h-full ${
+                    isClickable
                       ? "border-border hover:border-[#007acc]/40 hover:shadow-lg hover:shadow-[#007acc]/5 cursor-pointer card-hover"
-                      : "border-border/40 opacity-50"
+                      : connector.status === "coming-soon"
+                        ? "border-border/40 opacity-50"
+                        : "border-border"
                   }`}
                 >
-                  {connector.status === "coming-soon" && (
-                    <span className="absolute top-3 right-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                      Soon
-                    </span>
-                  )}
+                  <StatusBadge status={connector.status} />
+
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent shrink-0">
                       {connector.icon}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 pr-16">
                       <h3 className="text-[14px] font-semibold text-foreground">{connector.name}</h3>
                       <p className="text-[12px] text-muted-foreground mt-0.5 leading-relaxed">
                         {connector.description}
                       </p>
                     </div>
                   </div>
-                  {connector.status === "active" && (
-                    <div className="mt-3 flex items-center gap-1.5 text-[11px] text-[#68c2ff] font-medium">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#3fb950]" />
-                      Configure
+
+                  {connector.status !== "coming-soon" && (
+                    <div
+                      className={`mt-3 flex items-center gap-1.5 text-[11px] font-medium ${
+                        connector.status === "connected"
+                          ? "text-muted-foreground"
+                          : "text-[#68c2ff]"
+                      }`}
+                    >
+                      {connector.status === "connected" ? "Manage" : "Set up"}
                       <svg className="h-3 w-3 ml-auto" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                       </svg>
@@ -183,9 +219,9 @@ export default function ConnectorsPage() {
                 </div>
               );
 
-              if (connector.status === "active" && connector.href) {
+              if (isClickable) {
                 return (
-                  <Link key={connector.name} href={connector.href} className="block">
+                  <Link key={connector.name} href={connector.href!} className="block">
                     {card}
                   </Link>
                 );
@@ -196,6 +232,29 @@ export default function ConnectorsPage() {
         </div>
       ))}
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: ConnectorStatus }) {
+  if (status === "coming-soon") {
+    return (
+      <span className="absolute top-3 right-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+        Soon
+      </span>
+    );
+  }
+  if (status === "connected") {
+    return (
+      <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-[#3fb950] bg-[#3fb950]/10 ring-1 ring-inset ring-[#3fb950]/30 px-1.5 py-0.5 rounded">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#3fb950]" />
+        Connected
+      </span>
+    );
+  }
+  return (
+    <span className="absolute top-3 right-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/60 ring-1 ring-inset ring-border px-1.5 py-0.5 rounded">
+      Not configured
+    </span>
   );
 }
 
