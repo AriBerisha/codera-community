@@ -46,7 +46,10 @@ export const authConfig: NextAuthConfig = {
       return session;
     },
     authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
+      // Require both a user object AND a non-empty user id — a stale JWT
+      // whose user row was deleted (e.g. after a DB reset) leaves the
+      // `user` field present but with no id; treat that as logged out.
+      const isLoggedIn = Boolean(auth?.user?.id);
       const pathname = nextUrl.pathname;
       const role = auth?.user?.role;
 

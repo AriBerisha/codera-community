@@ -56,18 +56,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as { role: string }).role;
         token.id = user.id;
       } else if (token.id) {
-        // Refresh role from DB so changes take effect without re-login
+        // Refresh role from DB so changes take effect without re-login.
+        // If the user row is gone (DB reset, account deleted), invalidate the
+        // token so we don't pass a dangling userId to downstream queries
+        // (which would 500 with a foreign-key error on first write).
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
           select: { role: true },
         });
         if (dbUser) {
           token.role = dbUser.role;
+        } else {
+          delete (token as { id?: string }).id;
+          delete (token as { role?: string }).role;
         }
       }
       return token;
     },
     session({ session, token }) {
+      // Token was invalidated upstream (user row no longer exists). Strip the
+      // user field entirely so every `if (!session?.user)` guard in the API
+      // tier treats this as logged-out and the user gets bounced to /login.
+      if (!token.id) {
+        return { ...session, user: undefined as unknown as typeof session.user };
+      }
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;

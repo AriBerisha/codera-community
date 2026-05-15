@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface Conversation {
@@ -34,14 +35,25 @@ export function ConversationList() {
   }, [pathname]);
 
   async function createConversation() {
-    const res = await fetch("/api/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "New Chat" }),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New Chat" }),
+      });
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || `Could not start a new chat (HTTP ${res.status})`);
+        return;
+      }
       const conv = await res.json();
       router.push(`/chat/${conv.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Network error starting chat");
     }
   }
 

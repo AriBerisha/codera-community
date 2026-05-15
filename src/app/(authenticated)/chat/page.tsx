@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { ConversationList } from "@/components/chat/conversation-list";
 import { brand } from "@/lib/brand";
 
@@ -8,14 +9,25 @@ export default function ChatPage() {
   const router = useRouter();
 
   async function createAndRedirect() {
-    const res = await fetch("/api/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "New Chat" }),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New Chat" }),
+      });
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || `Could not start a new chat (HTTP ${res.status})`);
+        return;
+      }
       const conv = await res.json();
       router.push(`/chat/${conv.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Network error starting chat");
     }
   }
 
