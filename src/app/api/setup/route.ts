@@ -32,14 +32,24 @@ export async function POST(req: Request) {
       );
     }
 
+    // Same normalization as /api/admin/users so credentials and Google SSO
+    // (which lowercases) resolve to the same row.
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return NextResponse.json(
+        { error: "A valid email address is required" },
+        { status: 400 }
+      );
+    }
+
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create admin user and mark setup as complete in a transaction
     await prisma.$transaction([
       prisma.user.create({
         data: {
-          name,
-          email,
+          name: typeof name === "string" ? name.trim() : name,
+          email: normalizedEmail,
           hashedPassword,
           role: "OWNER",
         },

@@ -23,6 +23,14 @@ export async function POST(
     );
   }
 
+  const VALID_TEAM_ROLES = ["OWNER", "ADMIN", "MEMBER"] as const;
+  if (role !== undefined && !VALID_TEAM_ROLES.includes(role)) {
+    return NextResponse.json(
+      { error: `Role must be one of ${VALID_TEAM_ROLES.join(", ")}` },
+      { status: 400 }
+    );
+  }
+
   // Check team exists
   const team = await prisma.team.findUnique({ where: { id: teamId } });
   if (!team) {
@@ -33,6 +41,15 @@ export async function POST(
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // PENDING users have no permissions until an admin approves them. Adding
+  // them to a team would grant integration access via the team — refuse.
+  if (user.role === "PENDING") {
+    return NextResponse.json(
+      { error: "Approve this user from the Users page before adding them to a team" },
+      { status: 400 }
+    );
   }
 
   // Check if already a member

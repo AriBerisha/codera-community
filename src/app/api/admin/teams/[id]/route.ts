@@ -60,7 +60,21 @@ export async function PATCH(
   }
 
   if (body.enabledIntegrations !== undefined) {
+    if (
+      !Array.isArray(body.enabledIntegrations) ||
+      !body.enabledIntegrations.every((v: unknown) => typeof v === "string")
+    ) {
+      return NextResponse.json(
+        { error: "enabledIntegrations must be an array of strings" },
+        { status: 400 }
+      );
+    }
     data.enabledIntegrations = body.enabledIntegrations;
+  }
+
+  const existing = await prisma.team.findUnique({ where: { id } });
+  if (!existing) {
+    return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
 
   const team = await prisma.team.update({
@@ -82,6 +96,11 @@ export async function DELETE(
   }
 
   const { id } = await params;
+
+  const existing = await prisma.team.findUnique({ where: { id } });
+  if (!existing) {
+    return NextResponse.json({ error: "Team not found" }, { status: 404 });
+  }
 
   await prisma.team.delete({ where: { id } });
 

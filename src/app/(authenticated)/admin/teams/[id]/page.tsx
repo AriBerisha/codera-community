@@ -187,9 +187,12 @@ export default function TeamDetailPage() {
 
   if (!team) return null;
 
-  // Users not already in this team
+  // Users not already in this team. PENDING users are excluded because they
+  // can't be added (the API rejects them — approve them on /admin/users first).
   const memberUserIds = new Set(team.members.map((m) => m.user.id));
-  const availableUsers = allUsers.filter((u) => !memberUserIds.has(u.id));
+  const availableUsers = allUsers.filter(
+    (u) => !memberUserIds.has(u.id) && u.role !== "PENDING"
+  );
 
   return (
     <div className="p-4 md:p-6 max-w-5xl space-y-6">

@@ -46,7 +46,17 @@ export async function POST(req: Request) {
     );
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  // Normalize email so casing/whitespace doesn't lock the user out of SSO
+  // (Google sign-in lowercases) or credentials login (lookup is exact-match).
+  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return NextResponse.json(
+      { error: "A valid email address is required" },
+      { status: 400 }
+    );
+  }
+
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
     return NextResponse.json(
       { error: "A user with this email already exists" },
@@ -58,8 +68,8 @@ export async function POST(req: Request) {
 
   const user = await prisma.user.create({
     data: {
-      name,
-      email,
+      name: typeof name === "string" ? name.trim() : name,
+      email: normalizedEmail,
       hashedPassword,
       role: (role === "ADMIN" && session!.user!.role === "OWNER") ? "ADMIN" : "MEMBER",
     },
