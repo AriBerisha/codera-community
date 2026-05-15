@@ -286,29 +286,29 @@ export default function JiraPage() {
                 No projects found. Click &quot;Connect &amp; Sync&quot; to fetch projects from Jira.
               </p>
             ) : (
-              <div className="overflow-x-auto -mx-6 px-6">
-                <Table>
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[640px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Project</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Issues</TableHead>
-                      <TableHead>Last Indexed</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Issues</TableHead>
+                      <TableHead className="whitespace-nowrap">Last Indexed</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {projects.map((project) => (
                       <TableRow key={project.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{project.name}</p>
-                            <p className="text-xs text-muted-foreground">
+                        <TableCell className="max-w-[260px]">
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{project.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
                               {project.key}
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Badge
                             variant={
                               (statusColors[project.indexStatus] as "default" | "secondary" | "destructive") ||
@@ -319,34 +319,36 @@ export default function JiraPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>{project._count.issues}</TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                           {project.lastIndexedAt
                             ? new Date(project.lastIndexedAt).toLocaleString()
                             : "Never"}
                         </TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              toggleInclude(project.id, !project.included)
-                            }
-                          >
-                            {project.included ? "Exclude" : "Include"}
-                          </Button>
-                          {project.included && (
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:justify-end sm:gap-2">
                             <Button
+                              variant="outline"
                               size="sm"
-                              disabled={indexingProject === project.id}
-                              onClick={() => handleIndex(project.id)}
+                              onClick={() =>
+                                toggleInclude(project.id, !project.included)
+                              }
                             >
-                              {indexingProject === project.id
-                                ? "Indexing..."
-                                : project.indexStatus === "INDEXED"
-                                ? "Re-index"
-                                : "Index"}
+                              {project.included ? "Exclude" : "Include"}
                             </Button>
-                          )}
+                            {project.included && (
+                              <Button
+                                size="sm"
+                                disabled={indexingProject === project.id}
+                                onClick={() => handleIndex(project.id)}
+                              >
+                                {indexingProject === project.id
+                                  ? "Indexing..."
+                                  : project.indexStatus === "INDEXED"
+                                  ? "Re-index"
+                                  : "Index"}
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

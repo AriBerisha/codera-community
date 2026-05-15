@@ -286,29 +286,29 @@ export default function ConfluencePage() {
                 No spaces found. Click &quot;Connect &amp; Sync&quot; to fetch spaces from Confluence.
               </p>
             ) : (
-              <div className="overflow-x-auto -mx-6 px-6">
-                <Table>
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[640px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Space</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Pages</TableHead>
-                      <TableHead>Last Indexed</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Pages</TableHead>
+                      <TableHead className="whitespace-nowrap">Last Indexed</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {spaces.map((space) => (
                       <TableRow key={space.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{space.name}</p>
-                            <p className="text-xs text-muted-foreground">
+                        <TableCell className="max-w-[260px]">
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{space.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
                               {space.key}
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Badge
                             variant={
                               (statusColors[space.indexStatus] as "default" | "secondary" | "destructive") ||
@@ -319,34 +319,36 @@ export default function ConfluencePage() {
                           </Badge>
                         </TableCell>
                         <TableCell>{space._count.pages}</TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                           {space.lastIndexedAt
                             ? new Date(space.lastIndexedAt).toLocaleString()
                             : "Never"}
                         </TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              toggleInclude(space.id, !space.included)
-                            }
-                          >
-                            {space.included ? "Exclude" : "Include"}
-                          </Button>
-                          {space.included && (
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:justify-end sm:gap-2">
                             <Button
+                              variant="outline"
                               size="sm"
-                              disabled={indexingSpace === space.id}
-                              onClick={() => handleIndex(space.id)}
+                              onClick={() =>
+                                toggleInclude(space.id, !space.included)
+                              }
                             >
-                              {indexingSpace === space.id
-                                ? "Indexing..."
-                                : space.indexStatus === "INDEXED"
-                                ? "Re-index"
-                                : "Index"}
+                              {space.included ? "Exclude" : "Include"}
                             </Button>
-                          )}
+                            {space.included && (
+                              <Button
+                                size="sm"
+                                disabled={indexingSpace === space.id}
+                                onClick={() => handleIndex(space.id)}
+                              >
+                                {indexingSpace === space.id
+                                  ? "Indexing..."
+                                  : space.indexStatus === "INDEXED"
+                                  ? "Re-index"
+                                  : "Index"}
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

@@ -277,72 +277,74 @@ export default function GitHubPage() {
                 No repositories found. Click &quot;Connect &amp; Sync&quot; to fetch repositories from GitHub.
               </p>
             ) : (
-              <div className="overflow-x-auto -mx-6 px-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Repository</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Files</TableHead>
-                    <TableHead>Last Indexed</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {projects.map((project) => (
-                    <TableRow key={project.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{project.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {project.pathWithNamespace}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            (statusColors[project.indexStatus] as "default" | "secondary" | "destructive") ||
-                            "secondary"
-                          }
-                        >
-                          {project.indexStatus}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{project._count.files}</TableCell>
-                      <TableCell>
-                        {project.lastIndexedAt
-                          ? new Date(project.lastIndexedAt).toLocaleString()
-                          : "Never"}
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            toggleInclude(project.id, !project.included)
-                          }
-                        >
-                          {project.included ? "Exclude" : "Include"}
-                        </Button>
-                        {project.included && (
-                          <Button
-                            size="sm"
-                            disabled={indexingProject === project.id}
-                            onClick={() => handleIndex(project.id)}
-                          >
-                            {indexingProject === project.id
-                              ? "Indexing..."
-                              : project.indexStatus === "INDEXED"
-                              ? "Re-index"
-                              : "Index"}
-                          </Button>
-                        )}
-                      </TableCell>
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[640px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Repository</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Files</TableHead>
+                      <TableHead className="whitespace-nowrap">Last Indexed</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {projects.map((project) => (
+                      <TableRow key={project.id}>
+                        <TableCell className="max-w-[260px]">
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{project.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {project.pathWithNamespace}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <Badge
+                            variant={
+                              (statusColors[project.indexStatus] as "default" | "secondary" | "destructive") ||
+                              "secondary"
+                            }
+                          >
+                            {project.indexStatus}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{project._count.files}</TableCell>
+                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                          {project.lastIndexedAt
+                            ? new Date(project.lastIndexedAt).toLocaleString()
+                            : "Never"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:justify-end sm:gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                toggleInclude(project.id, !project.included)
+                              }
+                            >
+                              {project.included ? "Exclude" : "Include"}
+                            </Button>
+                            {project.included && (
+                              <Button
+                                size="sm"
+                                disabled={indexingProject === project.id}
+                                onClick={() => handleIndex(project.id)}
+                              >
+                                {indexingProject === project.id
+                                  ? "Indexing..."
+                                  : project.indexStatus === "INDEXED"
+                                  ? "Re-index"
+                                  : "Index"}
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
