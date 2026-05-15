@@ -355,7 +355,24 @@ export default function TeamDetailPage() {
                 onValueChange={(v) => setSelectedUserId(v ?? "")}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a user" />
+                  {/* Base UI's Select.Value renders the raw value by default;
+                      pass a render fn so the trigger shows name + email
+                      instead of the user's cuid. */}
+                  <SelectValue placeholder="Select a user">
+                    {(value: string | null) => {
+                      if (!value) return "Select a user";
+                      const u = availableUsers.find((u) => u.id === value);
+                      if (!u) return "Select a user";
+                      return (
+                        <>
+                          {u.name || u.email}{" "}
+                          <span className="text-muted-foreground">
+                            ({u.email})
+                          </span>
+                        </>
+                      );
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {availableUsers.map((user) => (
