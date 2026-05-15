@@ -13,6 +13,11 @@ interface IntegrationSelectorProps {
   disabled?: boolean;
 }
 
+// GitLab and GitHub have their own first-class picker (the Repositories
+// selector). Including them here is redundant — selecting a repo IS the
+// signal that the user wants code context from that source.
+const CODE_SOURCE_INTEGRATIONS = new Set(["gitlab", "github"]);
+
 export function IntegrationSelector({ selectedIds, onChange, disabled }: IntegrationSelectorProps) {
   const [integrations, setIntegrations] = useState<IntegrationOption[]>([]);
   const [open, setOpen] = useState(false);
@@ -21,7 +26,9 @@ export function IntegrationSelector({ selectedIds, onChange, disabled }: Integra
   useEffect(() => {
     fetch("/api/integrations")
       .then((r) => (r.ok ? r.json() : []))
-      .then(setIntegrations)
+      .then((data: IntegrationOption[]) =>
+        setIntegrations(data.filter((i) => !CODE_SOURCE_INTEGRATIONS.has(i.value)))
+      )
       .catch(() => {});
   }, []);
 
@@ -169,7 +176,9 @@ export function IntegrationBadges({ integrationIds }: { integrationIds: string[]
     if (integrationIds.length === 0) return;
     fetch("/api/integrations")
       .then((r) => (r.ok ? r.json() : []))
-      .then(setIntegrations)
+      .then((data: IntegrationOption[]) =>
+        setIntegrations(data.filter((i) => !CODE_SOURCE_INTEGRATIONS.has(i.value)))
+      )
       .catch(() => {});
   }, [integrationIds]);
 

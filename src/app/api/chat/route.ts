@@ -16,6 +16,12 @@ import { getLanguageFromPath } from "@/lib/gitlab/file-filter";
 import { buildChatsDirectory, buildSocialTools } from "@/lib/ai/tools/social-tools";
 import { buildMemoryTools, buildTeamMemoriesDirectory } from "@/lib/ai/tools/memory-tools";
 
+// Integrations that are represented by the Repositories picker rather than
+// the per-chat Integrations selector. Picking a repo enables code context
+// from that source; unchecking these from the integrations dropdown would
+// just be confusing UX.
+const CODE_SOURCE_INTEGRATIONS = new Set(["gitlab", "github"]);
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) {
@@ -100,14 +106,23 @@ export async function POST(req: Request) {
 
   // Determine which integrations this user may access, further narrowed
   // by any explicit per-conversation selection (empty list = no narrowing).
+  // Code-source integrations (gitlab/github) are special: the Repositories
+  // selector is the user-facing surface for them, so they aren't shown in
+  // the per-chat Integrations selector. Picking a repo *is* the signal to
+  // enable code context for that source, so we skip the selectedIntegrations
+  // narrowing for them and only enforce the team-level allowance.
   const allowed = await getUserAllowedIntegrations(session.user.id, session.user.role);
   const can = (i: string) =>
     isIntegrationAllowed(allowed, i) &&
-    (selectedIntegrations.length === 0 || selectedIntegrations.includes(i));
+    (CODE_SOURCE_INTEGRATIONS.has(i) ||
+      selectedIntegrations.length === 0 ||
+      selectedIntegrations.includes(i));
 
-  // Build code context from indexed files + other integrations (gated by team)
+  // Build code context from indexed files + other integrations (gated by team).
+  // Only loaded when the user actually picked a repo — picking no repos means
+  // "don't pull code context for this chat".
   const contextParts: Promise<string>[] = [];
-  if (can("gitlab") || can("github")) {
+  if (projectIds.length > 0 && (can("gitlab") || can("github"))) {
     contextParts.push(buildCodeContext(userContent, projectIds));
   }
   if (can("jira"))       contextParts.push(buildJiraContext(userContent));
