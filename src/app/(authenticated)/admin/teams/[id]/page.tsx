@@ -268,6 +268,22 @@ export default function TeamDetailPage() {
         </p>
       </div>
 
+      {/* Memories quick link */}
+      <Link
+        href={`/admin/teams/${id}/memories`}
+        className="flex items-center justify-between rounded-xl border border-border bg-card p-4 hover:border-[#007acc]/40 hover:shadow-lg hover:shadow-[#007acc]/5 transition-all"
+      >
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Memories</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Durable team knowledge — decisions, conventions, anything AI should remember across chats.
+          </p>
+        </div>
+        <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+      </Link>
+
       {/* Integrations */}
       <div className="rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground mb-1">

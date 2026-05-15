@@ -14,6 +14,7 @@ import { getUserAllowedIntegrations, isIntegrationAllowed } from "@/lib/teams/in
 import { parseFileEdits, applyEdit } from "@/lib/ai/parse-file-edits";
 import { getLanguageFromPath } from "@/lib/gitlab/file-filter";
 import { buildChatsDirectory, buildSocialTools } from "@/lib/ai/tools/social-tools";
+import { buildMemoryTools, buildTeamMemoriesDirectory } from "@/lib/ai/tools/memory-tools";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -125,13 +126,28 @@ export async function POST(req: Request) {
     telegram: can("telegram"),
     whatsapp: can("whatsapp"),
   });
-  const systemPrompt = buildSystemPrompt(fullContext, projectPaths) + chatsDirectory;
-
-  // Tool calling — currently only social send tools; gated by effective permissions
-  const tools = buildSocialTools({
-    telegram: can("telegram"),
-    whatsapp: can("whatsapp"),
+  // Plus a directory of team memories — the model knows what exists without
+  // having to call read_team_memory blindly.
+  const memoriesDirectory = await buildTeamMemoriesDirectory({
+    userId: session.user.id,
+    userRole: session.user.role,
   });
+  const systemPrompt =
+    buildSystemPrompt(fullContext, projectPaths) +
+    chatsDirectory +
+    memoriesDirectory;
+
+  // Tool calling — social send tools plus team-memory read/write
+  const tools = {
+    ...buildSocialTools({
+      telegram: can("telegram"),
+      whatsapp: can("whatsapp"),
+    }),
+    ...buildMemoryTools({
+      userId: session.user.id,
+      userRole: session.user.role,
+    }),
+  };
 
   // Get the configured AI model
   const model = await getModelInstance();
